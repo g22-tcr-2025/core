@@ -24,9 +24,10 @@ func ListenServer(conn net.Conn) {
 		switch msg.Type {
 		case config.MsgMatchStart:
 		case config.MsgStateUpdate:
+			var mana float64
+			json.Unmarshal(msg.Data.(json.RawMessage), &mana)
+			fmt.Println(mana)
 		case config.MsgMatchEnd:
-		case "demo":
-			fmt.Println("check")
 		}
 	}
 }
@@ -39,8 +40,7 @@ func ListenPlayer(conn net.Conn) {
 			log.Println("Error reading input:", err)
 		}
 		line = strings.TrimSpace(line)
-		fmt.Println("|", line, "|")
-		fmt.Println("end")
+		network.SendMessage(conn, network.Message{Type: "demo", Data: line})
 	}
 }
 

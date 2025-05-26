@@ -10,5 +10,5 @@ const (
 	MsgStateUpdate   = "STATE_UPDATE"
 	MsgMatchEnd      = "MATCH_END"
 
-	MatchDuration = 5 * time.Second
+	MatchDuration = 3 * time.Minute
 )
