@@ -1,0 +1,78 @@
+{
+    "troops": [
+        {
+            "name": "Pawn",
+            "hp": 50.0,
+            "atk": 150.0,
+            "def": 100.0,
+            "mana": 3.0,
+            "exp": 5.0
+        },
+        {
+            "name": "Bishop",
+            "hp": 100.0,
+            "atk": 200.0,
+            "def": 150.0,
+            "mana": 4.0,
+            "exp": 10.0
+        },
+        {
+            "name": "Rook",
+            "hp": 250.0,
+            "atk": 200.0,
+            "def": 200.0,
+            "mana": 5.0,
+            "exp": 25.0
+        },
+        {
+            "name": "Knight",
+            "hp": 200.0,
+            "atk": 300.0,
+            "def": 150.0,
+            "mana": 5.0,
+            "exp": 25.0
+        },
+        {
+            "name": "Prince",
+            "hp": 500.0,
+            "atk": 400.0,
+            "def": 300.0,
+            "mana": 6.0,
+            "exp": 50.0
+        },
+        {
+            "name": "Queen",
+            "hp": null,
+            "atk": null,
+            "def": null,
+            "mana": 5.0,
+            "exp": 30.0
+        }
+    ],
+    "towers": [
+        {
+            "type": "Guard Tower 1",
+            "hp": 1000.0,
+            "atk": 300.0,
+            "def": 100.0,
+            "crit": 0.05,
+            "exp": 100.0
+        },
+        {
+            "type": "Guard Tower 2",
+            "hp": 1000.0,
+            "atk": 300.0,
+            "def": 100.0,
+            "crit": 0.05,
+            "exp": 100.0
+        },
+        {
+            "type": "King Tower",
+            "hp": 2000.0,
+            "atk": 500.0,
+            "def": 300.0,
+            "crit": 0.1,
+            "exp": 200.0
+        }
+    ]
+}

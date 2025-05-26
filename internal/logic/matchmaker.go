@@ -14,7 +14,7 @@ import (
 
 type MatchMaker struct {
 	UserStore *data.UserStore
-	queue     []*game.Player
+	queue     []*game.User
 	mutext    sync.Mutex
 }
 
@@ -41,27 +41,27 @@ func (m *MatchMaker) HandleConnection(conn net.Conn) {
 		return
 	}
 
-	data.EnsurePlayerMetadata(loginData.Username)
-	playerData, _ := data.LoadPlayerData(loginData.Username)
+	data.EnsureMetadata(loginData.Username)
+	userMetadata, _ := data.LoadMetadata(loginData.Username)
 
-	player := game.Player{
-		Conn: conn,
-		Data: *playerData,
+	user := game.User{
+		Conn:     conn,
+		Metadata: *userMetadata,
 	}
 
 	m.mutext.Lock()
-	m.queue = append(m.queue, &player)
+	m.queue = append(m.queue, &user)
 	if len(m.queue) >= 2 {
-		p1 := m.queue[0]
-		p2 := m.queue[1]
+		u1 := m.queue[0]
+		u2 := m.queue[1]
 
 		m.queue = m.queue[2:]
 
 		// Make new engine
-		engine := game.NewEngine(p1, p2)
+		engine := game.NewEngine(u1, u2)
 
-		go engine.ListenPlayer(p1)
-		go engine.ListenPlayer(p2)
+		go engine.ListenUser(u1)
+		go engine.ListenUser(u2)
 
 		engine.Start(config.MatchDuration)
 	}
