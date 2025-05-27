@@ -17,6 +17,8 @@ func main() {
 		return
 	}
 
+	ui.ClearScreen()
+
 	go ui.ListenPlayer(conn)
 	go ui.ListenServer(conn)
 

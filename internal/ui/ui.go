@@ -26,7 +26,8 @@ func ListenServer(conn net.Conn) {
 		case config.MsgStateUpdate:
 			var mana float64
 			json.Unmarshal(msg.Data.(json.RawMessage), &mana)
-			fmt.Println(mana)
+			RenderMana(mana)
+			// ClearScreen()
 		case config.MsgMatchEnd:
 		}
 	}
@@ -41,6 +42,7 @@ func ListenPlayer(conn net.Conn) {
 		}
 		line = strings.TrimSpace(line)
 		network.SendMessage(conn, network.Message{Type: "demo", Data: line})
+		ClearInput()
 	}
 }
 
@@ -85,4 +87,24 @@ func LoginStep(conn net.Conn) error {
 	}
 
 	return nil
+}
+
+func ClearScreen() {
+	fmt.Print("\033[2J\033[H")
+	fmt.Println("Mana: 0")
+	fmt.Print(">> ")
+}
+
+func ClearInput() {
+	fmt.Print("\033[2;1H")
+	fmt.Print("\033[K")
+	fmt.Print(">> ")
+}
+
+func RenderMana(mana float64) {
+	fmt.Print("\033[s")            // Save pointer
+	fmt.Print("\033[1;1H")         // Move to line 1 col 1
+	fmt.Print("\033[K")            // Clear line
+	fmt.Printf("Mana: %.1f", mana) // Print mana
+	fmt.Print("\033[u")            // Back to previous
 }
