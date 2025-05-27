@@ -23,12 +23,13 @@ func ListenServer(conn net.Conn) {
 		}
 		switch msg.Type {
 		case config.MsgMatchStart:
-		case config.MsgStateUpdate:
+			var template game.MatchData
+			json.Unmarshal(msg.Data.(json.RawMessage), &template)
+			RenderTemplate(template)
+		case config.MsgUpdateMnana:
 			var mana float64
 			json.Unmarshal(msg.Data.(json.RawMessage), &mana)
 			RenderMana(mana)
-			// ClearScreen()
-		case config.MsgMatchEnd:
 		}
 	}
 }
@@ -91,20 +92,89 @@ func LoginStep(conn net.Conn) error {
 
 func ClearScreen() {
 	fmt.Print("\033[2J\033[H")
-	fmt.Println("Mana: 0")
-	fmt.Print(">> ")
 }
 
 func ClearInput() {
-	fmt.Print("\033[2;1H")
+	fmt.Print("\033[26;1H")
 	fmt.Print("\033[K")
 	fmt.Print(">> ")
 }
 
+func RenderTemplate(matchData game.MatchData) {
+	ClearScreen()
+
+	fmt.Println("============ You ============")
+	fmt.Printf("============ %s - %d ============\n", matchData.PUsername, int(matchData.PLevel))
+	fmt.Println(manaString(matchData.PMana))
+	fmt.Println()
+	for i, troop := range matchData.PTroops {
+		fmt.Println(troopString(i, troop))
+	}
+	fmt.Println()
+	for i, tower := range matchData.PTowers {
+		fmt.Println(towerString(i, tower))
+	}
+	fmt.Println()
+
+	fmt.Println("============ Opponent ============")
+	fmt.Printf("============ %s - %d ============\n", matchData.OUsername, int(matchData.OLevel))
+	fmt.Println(manaString(matchData.OMana))
+	fmt.Println()
+	for i, troop := range matchData.OTroops {
+		fmt.Println(troopString(i, troop))
+	}
+	fmt.Println()
+	for i, tower := range matchData.OTowers {
+		fmt.Println(towerString(i, tower))
+	}
+	fmt.Println()
+	fmt.Println("Command: <troop_index> <tower_index>")
+	fmt.Print(">> ")
+}
+
+func manaString(mana float64) string {
+	manaInt := int(mana)
+	str := ""
+	for range manaInt {
+		str += "#"
+	}
+	return str
+}
+
+func troopString(index int, troop game.Troop) string {
+	str := ""
+	str += fmt.Sprintf("[%d]", index)
+	if troop.HP <= 0 {
+		str += fmt.Sprintf(" 🪦 %s", troop.Name)
+	} else {
+		str += fmt.Sprintf(" 🤖 %s", troop.Name)
+	}
+	str += fmt.Sprintf("\t\t❤️ %d", int(troop.HP))
+	str += fmt.Sprintf("\t🛡️ %d", int(troop.DEF))
+	str += fmt.Sprintf("\t⚔️ %d", int(troop.ATK))
+
+	return str
+}
+
+func towerString(index int, tower game.Tower) string {
+	str := ""
+	str += fmt.Sprintf("[%d]", index)
+	if tower.HP <= 0 {
+		str += fmt.Sprintf(" 🪨 %s", tower.Type)
+	} else {
+		str += fmt.Sprintf(" 🏰 %s", tower.Type)
+	}
+	str += fmt.Sprintf("\t❤️ %d", int(tower.HP))
+	str += fmt.Sprintf("\t🛡️ %d", int(tower.DEF))
+	str += fmt.Sprintf("\t⚔️ %d", int(tower.ATK))
+
+	return str
+}
+
 func RenderMana(mana float64) {
-	fmt.Print("\033[s")            // Save pointer
-	fmt.Print("\033[1;1H")         // Move to line 1 col 1
-	fmt.Print("\033[K")            // Clear line
-	fmt.Printf("Mana: %.1f", mana) // Print mana
-	fmt.Print("\033[u")            // Back to previous
+	fmt.Print("\033[s")         // Save pointer
+	fmt.Print("\033[3;1H")      // Move to line 3 col 1
+	fmt.Print("\033[K")         // Clear line
+	fmt.Print(manaString(mana)) // Print mana
+	fmt.Print("\033[u")         // Back to previous
 }

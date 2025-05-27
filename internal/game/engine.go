@@ -52,7 +52,34 @@ func randomTroop(troops []Troop) []Troop {
 }
 
 func (e *Engine) Start() {
-	log.Println("Match started")
+	p1 := MatchData{
+		PUsername: e.Players[0].User.Metadata.Username,
+		PLevel:    e.Players[0].User.Metadata.Level,
+		PMana:     e.Players[0].Mana,
+		PTroops:   e.Players[0].Troops,
+		PTowers:   e.Players[0].Towers,
+		OUsername: e.Players[1].User.Metadata.Username,
+		OLevel:    e.Players[1].User.Metadata.Level,
+		OMana:     e.Players[1].Mana,
+		OTroops:   e.Players[1].Troops,
+		OTowers:   e.Players[1].Towers,
+	}
+	p2 := MatchData{
+		PUsername: e.Players[1].User.Metadata.Username,
+		PLevel:    e.Players[1].User.Metadata.Level,
+		PMana:     e.Players[1].Mana,
+		PTroops:   e.Players[1].Troops,
+		PTowers:   e.Players[1].Towers,
+		OUsername: e.Players[0].User.Metadata.Username,
+		OLevel:    e.Players[0].User.Metadata.Level,
+		OMana:     e.Players[0].Mana,
+		OTroops:   e.Players[0].Troops,
+		OTowers:   e.Players[0].Towers,
+	}
+
+	network.SendMessage(e.Players[0].User.Conn, network.Message{Type: config.MsgMatchStart, Data: p1})
+	network.SendMessage(e.Players[1].User.Conn, network.Message{Type: config.MsgMatchStart, Data: p2})
+
 	go runtime(e)
 	go handleCommand(e)
 }
@@ -75,8 +102,8 @@ func runtime(e *Engine) {
 				}
 			}
 
-			network.SendMessage(e.Players[0].User.Conn, network.Message{Type: config.MsgStateUpdate, Data: e.Players[0].Mana})
-			network.SendMessage(e.Players[1].User.Conn, network.Message{Type: config.MsgStateUpdate, Data: e.Players[1].Mana})
+			network.SendMessage(e.Players[0].User.Conn, network.Message{Type: config.MsgUpdateMnana, Data: e.Players[0].Mana})
+			network.SendMessage(e.Players[1].User.Conn, network.Message{Type: config.MsgUpdateMnana, Data: e.Players[1].Mana})
 
 			// Check duration
 			if e.Tick >= int(config.MatchDuration.Seconds()) {
