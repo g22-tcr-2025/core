@@ -8,7 +8,8 @@ const (
 
 	MsgMatchStart = "MATCH_START"
 
-	MsgUpdateMnana = "UPDATE_MANA"
+	MsgUpdatePlayerMnana  = "UPDATE_PLAYER_MANA"
+	MsgUpdateOpponentMana = "UPDATE_OPPONENT_MANA"
 
 	MsgAttack       = "ATTACK"
 	MsgAttackResult = "ATTACK_RS"

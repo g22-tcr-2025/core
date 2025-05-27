@@ -16,39 +16,39 @@ type Player struct {
 	Mutex  sync.Mutex
 }
 
-func (p *Player) Attack(o *Player, command *Command) network.Message {
+func (p *Player) Attack(o *Player, command *Command) (network.Message, error) {
 	// CASE 0: troop out of index
 	if command.TroopIndex < 0 || command.TroopIndex > 2 {
-		return network.Message{Type: config.MsgError, Data: "🤖 invaid index"}
+		return network.Message{Type: config.MsgError, Data: "🤖 invaid index"}, fmt.Errorf("troop out of index")
 	}
 	troop := &p.Troops[command.TroopIndex]
 
 	// CASE 1: Not enough mana
 	if p.Mana <= 0 || p.Mana < troop.Mana {
-		return network.Message{Type: config.MsgError, Data: "You don't have enough mana!"}
+		return network.Message{Type: config.MsgError, Data: "You don't have enough mana!"}, fmt.Errorf("not enough mana")
 	}
 
 	// CASE 2: Troop destroyed
 	if troop.HP <= 0 {
-		return network.Message{Type: config.MsgError, Data: fmt.Sprintf("🤖 %s destroyed!", troop.Name)}
+		return network.Message{Type: config.MsgError, Data: fmt.Sprintf("🤖 %s destroyed!", troop.Name)}, fmt.Errorf("troop destroyed")
 	}
 
 	// CASE 3: Wrong target tower
 	switch command.TowerIndex {
 	case 0:
 		if !((o.Towers[0].HP > 0) && (o.Towers[0].HP <= o.User.Metadata.Towers[0].HP) && (o.Towers[1].HP == o.User.Metadata.Towers[1].HP) && (o.Towers[2].HP == o.User.Metadata.Towers[2].HP)) {
-			return network.Message{Type: config.MsgError, Data: "🏰 invaid index"}
+			return network.Message{Type: config.MsgError, Data: "🏰 invaid index"}, fmt.Errorf("wrong target tower")
 		}
 	case 1:
 		if !((o.Towers[0].HP <= 0) && (o.Towers[1].HP > 0) && (o.Towers[1].HP <= o.User.Metadata.Towers[1].HP) && (o.Towers[2].HP == o.User.Metadata.Towers[2].HP)) {
-			return network.Message{Type: config.MsgError, Data: "🏰 invaid index"}
+			return network.Message{Type: config.MsgError, Data: "🏰 invaid index"}, fmt.Errorf("wrong target tower")
 		}
 	case 2:
 		if !((o.Towers[0].HP <= 0) && (o.Towers[1].HP <= 0) && (o.Towers[2].HP > 0) && (o.Towers[2].HP <= o.User.Metadata.Towers[2].HP)) {
-			return network.Message{Type: config.MsgError, Data: "🏰 invaid index"}
+			return network.Message{Type: config.MsgError, Data: "🏰 invaid index"}, fmt.Errorf("wrong target tower")
 		}
 	default:
-		return network.Message{Type: config.MsgError, Data: "🏰 not found!"}
+		return network.Message{Type: config.MsgError, Data: "🏰 not found!"}, fmt.Errorf("wrong target tower")
 	}
 
 	tower := &o.Towers[command.TowerIndex]
@@ -56,11 +56,11 @@ func (p *Player) Attack(o *Player, command *Command) network.Message {
 	p.Mana -= troop.Mana
 
 	crit := tower.HasCrit()
-	// fmt.Println(crit)
 
 	var dmgToTroop float64
 	if crit {
 		dmgToTroop = max(tower.ATK*1.2-troop.DEF, 0.0)
+		fmt.Printf("Bump!!! %s Has crit with %.f damage to %s troop!!!!", p.User.Metadata.Username, dmgToTroop, troop.Name)
 	} else {
 		dmgToTroop = max(tower.ATK-troop.DEF, 0.0)
 	}
@@ -76,5 +76,5 @@ func (p *Player) Attack(o *Player, command *Command) network.Message {
 		TargetTower:  *tower,
 		DamgeToTroop: dmgToTroop,
 		DamgeToTower: dmgToTower,
-	}}
+	}}, nil
 }

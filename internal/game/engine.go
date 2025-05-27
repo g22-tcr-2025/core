@@ -102,8 +102,11 @@ func runtime(e *Engine) {
 				}
 			}
 
-			network.SendMessage(e.Players[0].User.Conn, network.Message{Type: config.MsgUpdateMnana, Data: e.Players[0].Mana})
-			network.SendMessage(e.Players[1].User.Conn, network.Message{Type: config.MsgUpdateMnana, Data: e.Players[1].Mana})
+			network.SendMessage(e.Players[0].User.Conn, network.Message{Type: config.MsgUpdatePlayerMnana, Data: e.Players[0].Mana})
+			network.SendMessage(e.Players[0].User.Conn, network.Message{Type: config.MsgUpdateOpponentMana, Data: e.Players[1].Mana})
+
+			network.SendMessage(e.Players[1].User.Conn, network.Message{Type: config.MsgUpdatePlayerMnana, Data: e.Players[1].Mana})
+			network.SendMessage(e.Players[1].User.Conn, network.Message{Type: config.MsgUpdateOpponentMana, Data: e.Players[0].Mana})
 
 			// Check duration
 			if e.Tick >= int(config.MatchDuration.Seconds()) {
@@ -122,17 +125,25 @@ func handleCommand(e *Engine) {
 			var command Command
 			json.Unmarshal(msg.Data.(json.RawMessage), &command)
 
-			rs := e.Players[0].Attack(e.Players[1], &command)
-			for _, p := range e.Players {
-				network.SendMessage(p.User.Conn, rs)
+			rs, err := e.Players[0].Attack(e.Players[1], &command)
+			if err != nil {
+				network.SendMessage(e.Players[0].User.Conn, rs)
+			} else {
+				for _, p := range e.Players {
+					network.SendMessage(p.User.Conn, rs)
+				}
 			}
 		case msg := <-e.Players[1].User.Talk:
 			var command Command
 			json.Unmarshal(msg.Data.(json.RawMessage), &command)
-			rs := e.Players[1].Attack(e.Players[0], &command)
+			rs, err := e.Players[1].Attack(e.Players[0], &command)
 
-			for _, p := range e.Players {
-				network.SendMessage(p.User.Conn, rs)
+			if err != nil {
+				network.SendMessage(e.Players[1].User.Conn, rs)
+			} else {
+				for _, p := range e.Players {
+					network.SendMessage(p.User.Conn, rs)
+				}
 			}
 		case <-e.Players[0].User.Interrupt:
 			fmt.Println("Player 1 disconnected")

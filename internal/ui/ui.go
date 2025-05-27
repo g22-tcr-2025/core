@@ -29,10 +29,14 @@ func ListenServer(conn net.Conn) {
 			var template game.MatchData
 			json.Unmarshal(msg.Data.(json.RawMessage), &template)
 			RenderTemplate(template)
-		case config.MsgUpdateMnana:
+		case config.MsgUpdatePlayerMnana:
 			var mana float64
 			json.Unmarshal(msg.Data.(json.RawMessage), &mana)
-			RenderMana(mana)
+			RenderPlayerMana(mana)
+		case config.MsgUpdateOpponentMana:
+			var mana float64
+			json.Unmarshal(msg.Data.(json.RawMessage), &mana)
+			RenderOpponentMana(mana)
 		case config.MsgAttackResult:
 			var combatResult game.CombatResult
 			json.Unmarshal(msg.Data.(json.RawMessage), &combatResult)
@@ -173,15 +177,6 @@ func RenderTemplate(matchData game.MatchData) {
 	fmt.Print(">> ")
 }
 
-func manaString(mana float64) string {
-	manaInt := int(mana)
-	str := ""
-	for range manaInt {
-		str += "#"
-	}
-	return str
-}
-
 func troopString(index int, troop game.Troop) string {
 	str := ""
 	str += fmt.Sprintf("[%d]", index)
@@ -193,6 +188,7 @@ func troopString(index int, troop game.Troop) string {
 	str += fmt.Sprintf("\t\t❤️ %d", int(troop.HP))
 	str += fmt.Sprintf("\t🛡️ %d", int(troop.DEF))
 	str += fmt.Sprintf("\t⚔️ %d", int(troop.ATK))
+	str += fmt.Sprintf("\t💧 %d", int(troop.Mana))
 
 	return str
 }
@@ -221,16 +217,29 @@ func towerString(index int, tower game.Tower) string {
 	return str
 }
 
-func RenderMana(mana float64) {
+func RenderPlayerMana(mana float64) {
 	fmt.Print("\033[s")         // Save pointer
 	fmt.Print("\033[3;1H")      // Move to line 3 col 1
 	fmt.Print("\033[K")         // Clear line
 	fmt.Print(manaString(mana)) // Print mana
+	fmt.Print("\033[u")         // Back to previous
+}
 
-	fmt.Print("\033[15;1H")     // Move to line 3 col 1
+func RenderOpponentMana(mana float64) {
+	fmt.Print("\033[s")         // Save pointer
+	fmt.Print("\033[15;1H")     // Move to line 15 col 1
 	fmt.Print("\033[K")         // Clear line
 	fmt.Print(manaString(mana)) // Print mana
 	fmt.Print("\033[u")         // Back to previous
+}
+
+func manaString(mana float64) string {
+	manaInt := int(mana)
+	str := ""
+	for range manaInt {
+		str += "💧"
+	}
+	return str
 }
 
 func RenderNotification(content string) {
