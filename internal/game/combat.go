@@ -5,14 +5,11 @@ type Command struct {
 	TowerIndex int `json:"tower_index"`
 }
 
-func CalculateDamage(atk, def float64, crit bool) float64 {
-	dmg := atk
-	if crit {
-		dmg *= 1.2
-	}
-	dmg -= def
-	if dmg < 0.0 {
-		return 0.0
-	}
-	return dmg
+type CombatResult struct {
+	Attacker     string  `json:"attacker"`
+	Defender     string  `json:"defender"`
+	UsingTroop   Troop   `json:"using_troop"`
+	TargetTower  Tower   `json:"target_tower"`
+	DamgeToTroop float64 `json:"dmg_to_troop"`
+	DamgeToTower float64 `json:"dmg_to_tower"`
 }

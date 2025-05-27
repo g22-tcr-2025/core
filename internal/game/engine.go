@@ -122,12 +122,18 @@ func handleCommand(e *Engine) {
 			var command Command
 			json.Unmarshal(msg.Data.(json.RawMessage), &command)
 
-			fmt.Println(command.TowerIndex, command.TroopIndex)
+			rs := e.Players[0].Attack(e.Players[1], &command)
+			for _, p := range e.Players {
+				network.SendMessage(p.User.Conn, rs)
+			}
 		case msg := <-e.Players[1].User.Talk:
 			var command Command
 			json.Unmarshal(msg.Data.(json.RawMessage), &command)
+			rs := e.Players[1].Attack(e.Players[0], &command)
 
-			fmt.Println(command.TowerIndex, command.TroopIndex)
+			for _, p := range e.Players {
+				network.SendMessage(p.User.Conn, rs)
+			}
 		case <-e.Players[0].User.Interrupt:
 			fmt.Println("Player 1 disconnected")
 			e.End <- true

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"os"
 	"strconv"
@@ -32,6 +33,15 @@ func ListenServer(conn net.Conn) {
 			var mana float64
 			json.Unmarshal(msg.Data.(json.RawMessage), &mana)
 			RenderMana(mana)
+		case config.MsgAttackResult:
+			var combatResult game.CombatResult
+			json.Unmarshal(msg.Data.(json.RawMessage), &combatResult)
+
+			RenderNotification(combatString(combatResult))
+		case config.MsgError:
+			var err string
+			json.Unmarshal(msg.Data.(json.RawMessage), &err)
+			RenderNotification(err)
 		}
 	}
 }
@@ -187,6 +197,15 @@ func troopString(index int, troop game.Troop) string {
 	return str
 }
 
+func combatString(combatResult game.CombatResult) string {
+	str := combatResult.Attacker
+	str += fmt.Sprintf(" 🎯 %s", combatResult.Defender)
+	str += fmt.Sprintf(" | 🤖 %s ⛏️  %s 🏰", combatResult.UsingTroop.Name, combatResult.TargetTower.Type)
+	str += fmt.Sprintf(" | 🤖 (-%d🩸) ~ 🏰 (-%d🩸)", int(math.Ceil(combatResult.DamgeToTroop)), int(math.Ceil(combatResult.DamgeToTower)))
+
+	return str
+}
+
 func towerString(index int, tower game.Tower) string {
 	str := ""
 	str += fmt.Sprintf("[%d]", index)
@@ -205,6 +224,10 @@ func towerString(index int, tower game.Tower) string {
 func RenderMana(mana float64) {
 	fmt.Print("\033[s")         // Save pointer
 	fmt.Print("\033[3;1H")      // Move to line 3 col 1
+	fmt.Print("\033[K")         // Clear line
+	fmt.Print(manaString(mana)) // Print mana
+
+	fmt.Print("\033[15;1H")     // Move to line 3 col 1
 	fmt.Print("\033[K")         // Clear line
 	fmt.Print(manaString(mana)) // Print mana
 	fmt.Print("\033[u")         // Back to previous
