@@ -3,8 +3,8 @@ package game
 import (
 	"clash-royale/internal/config"
 	"clash-royale/internal/network"
+	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
 	"sync"
 	"time"
@@ -107,11 +107,9 @@ func runtime(e *Engine) {
 
 			// Check duration
 			if e.Tick >= int(config.MatchDuration.Seconds()) {
-				e.End <- true
 				return
 			}
 		case <-e.End:
-			log.Println("Match ended")
 			return
 		}
 	}
@@ -121,9 +119,15 @@ func handleCommand(e *Engine) {
 	for {
 		select {
 		case msg := <-e.Players[0].User.Talk:
-			fmt.Println(msg)
+			var command Command
+			json.Unmarshal(msg.Data.(json.RawMessage), &command)
+
+			fmt.Println(command.TowerIndex, command.TroopIndex)
 		case msg := <-e.Players[1].User.Talk:
-			fmt.Println(msg)
+			var command Command
+			json.Unmarshal(msg.Data.(json.RawMessage), &command)
+
+			fmt.Println(command.TowerIndex, command.TroopIndex)
 		case <-e.Players[0].User.Interrupt:
 			fmt.Println("Player 1 disconnected")
 			e.End <- true

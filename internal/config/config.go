@@ -10,5 +10,7 @@ const (
 
 	MsgUpdateMnana = "UPDATE_MANA"
 
-	MatchDuration = 3 * time.Minute
+	MsgAttack = "ATTACK"
+
+	MatchDuration = 5 * time.Minute
 )

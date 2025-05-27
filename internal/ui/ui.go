@@ -6,10 +6,12 @@ import (
 	"clash-royale/internal/game"
 	"clash-royale/internal/network"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -42,9 +44,34 @@ func ListenPlayer(conn net.Conn) {
 			log.Println("Error reading input:", err)
 		}
 		line = strings.TrimSpace(line)
-		network.SendMessage(conn, network.Message{Type: "demo", Data: line})
+
+		data, err := validCommand(line)
+		if err != nil {
+			RenderNotification(err.Error())
+		} else {
+			network.SendMessage(conn, network.Message{Type: config.MsgAttack, Data: data})
+		}
 		ClearInput()
 	}
+}
+
+func validCommand(line string) (game.Command, error) {
+	data := strings.Split(line, " ")
+	if len(data) != 2 {
+		return game.Command{}, errors.New("invalid command")
+	}
+
+	indexTroop, err := strconv.Atoi(data[0])
+	if err != nil {
+		return game.Command{}, err
+	}
+
+	indexTower, err := strconv.Atoi(data[1])
+	if err != nil {
+		return game.Command{}, err
+	}
+
+	return game.Command{TroopIndex: indexTroop, TowerIndex: indexTower}, nil
 }
 
 func LoginStep(conn net.Conn) error {
@@ -95,7 +122,7 @@ func ClearScreen() {
 }
 
 func ClearInput() {
-	fmt.Print("\033[26;1H")
+	fmt.Print("\033[28;1H")
 	fmt.Print("\033[K")
 	fmt.Print(">> ")
 }
@@ -128,6 +155,10 @@ func RenderTemplate(matchData game.MatchData) {
 		fmt.Println(towerString(i, tower))
 	}
 	fmt.Println()
+
+	fmt.Println(":: ")
+	fmt.Println()
+
 	fmt.Println("Command: <troop_index> <tower_index>")
 	fmt.Print(">> ")
 }
@@ -177,4 +208,12 @@ func RenderMana(mana float64) {
 	fmt.Print("\033[K")         // Clear line
 	fmt.Print(manaString(mana)) // Print mana
 	fmt.Print("\033[u")         // Back to previous
+}
+
+func RenderNotification(content string) {
+	fmt.Print("\033[s")       // Save pointer
+	fmt.Print("\033[25;1H")   // Move to line 3 col 1
+	fmt.Print("\033[K")       // Clear line
+	fmt.Print(":: ", content) // Print mana
+	fmt.Print("\033[u")       // Back to previous
 }

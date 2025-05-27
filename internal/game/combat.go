@@ -1,10 +1,8 @@
 package game
 
 type Command struct {
-	Attacker   string `json:"attacker"`
-	Defender   string `json:"defender"`
-	TroopIndex int    `json:"troop_index"`
-	TowerIndex int    `json:"tower_index"`
+	TroopIndex int `json:"troop_index"`
+	TowerIndex int `json:"tower_index"`
 }
 
 func CalculateDamage(atk, def float64, crit bool) float64 {
