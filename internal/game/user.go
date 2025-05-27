@@ -1,7 +1,10 @@
 package game
 
 import (
+	"bufio"
+	"clash-royale/internal/network"
 	"encoding/json"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -21,8 +24,26 @@ type UserMetadata struct {
 }
 
 type User struct {
-	Conn     net.Conn
-	Metadata UserMetadata
+	Conn      net.Conn
+	Metadata  UserMetadata
+	Talk      chan network.Message
+	Interrupt chan bool
+}
+
+func (u *User) ListenUser() error {
+	defer u.Conn.Close()
+	reader := bufio.NewReader(u.Conn)
+	for {
+		msg, err := network.ReceiveMessage(reader)
+		if err != nil {
+			log.Printf("[%s] disconnected\n", u.Metadata.Username)
+
+			u.Interrupt <- true
+			return err
+		}
+
+		u.Talk <- msg
+	}
 }
 
 func (um *UserMetadata) SaveAll() error {

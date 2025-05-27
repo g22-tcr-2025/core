@@ -45,25 +45,31 @@ func (m *MatchMaker) HandleConnection(conn net.Conn) {
 	userMetadata, _ := data.LoadMetadata(loginData.Username)
 
 	user := game.User{
-		Conn:     conn,
-		Metadata: *userMetadata,
+		Conn:      conn,
+		Metadata:  *userMetadata,
+		Talk:      make(chan network.Message),
+		Interrupt: make(chan bool),
 	}
+
+	go user.ListenUser()
 
 	m.mutext.Lock()
 	m.queue = append(m.queue, &user)
-	if len(m.queue) >= 2 {
+	m.tryMatch()
+	m.mutext.Unlock()
+}
+
+func (m *MatchMaker) tryMatch() {
+	for len(m.queue) >= 2 {
 		u1 := m.queue[0]
 		u2 := m.queue[1]
-
 		m.queue = m.queue[2:]
 
-		// Make new engine
-		engine := game.NewEngine(u1, u2)
-
-		go engine.ListenUser(u1)
-		go engine.ListenUser(u2)
-
-		engine.Start(config.MatchDuration)
+		go game.NewEngine(u1, u2, func(u *game.User) {
+			m.mutext.Lock()
+			m.queue = append(m.queue, u)
+			m.tryMatch()
+			m.mutext.Unlock()
+		}).Start()
 	}
-	m.mutext.Unlock()
 }

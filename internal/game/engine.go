@@ -1,9 +1,9 @@
 package game
 
 import (
-	"bufio"
 	"clash-royale/internal/config"
 	"clash-royale/internal/network"
+	"fmt"
 	"log"
 	"math/rand"
 	"sync"
@@ -13,27 +13,11 @@ import (
 type Engine struct {
 	Players   []*Player
 	Tick      int
-	Talk      chan network.Message
 	End       chan bool
-	Interrupt chan bool
+	OnRequeue func(u *User)
 }
 
-func (e *Engine) ListenUser(u *User) error {
-	defer u.Conn.Close()
-	reader := bufio.NewReader(u.Conn)
-	for {
-		msg, err := network.ReceiveMessage(reader)
-		if err != nil {
-			log.Printf("[%s] disconnected\n", u.Metadata.Username)
-			e.Interrupt <- true
-			return err
-		}
-
-		e.Talk <- msg
-	}
-}
-
-func NewEngine(u1, u2 *User) *Engine {
+func NewEngine(u1, u2 *User, onRequeue func(u *User)) *Engine {
 	p1 := Player{
 		User:   *u1,
 		Mana:   5.0,
@@ -55,9 +39,8 @@ func NewEngine(u1, u2 *User) *Engine {
 	return &Engine{
 		Players:   []*Player{&p1, &p2},
 		Tick:      0,
-		Talk:      make(chan network.Message, 10), // Ignore spam
 		End:       make(chan bool),
-		Interrupt: make(chan bool),
+		OnRequeue: onRequeue,
 	}
 }
 
@@ -68,26 +51,13 @@ func randomTroop(troops []Troop) []Troop {
 	return troops[:3]
 }
 
-func (e *Engine) Start(duration time.Duration) {
-	go runtime(duration, e)
-
-	for {
-		select {
-		case <-e.Talk:
-			e.Players[0].Mutex.Lock()
-			e.Players[0].Mana -= 10
-			e.Players[0].Mutex.Unlock()
-			network.SendMessage(e.Players[0].User.Conn, network.Message{Type: config.MsgStateUpdate, Data: e.Players[0].Mana})
-			network.SendMessage(e.Players[1].User.Conn, network.Message{Type: config.MsgStateUpdate, Data: e.Players[1].Mana})
-		case <-e.End:
-			network.SendMessage(e.Players[0].User.Conn, network.Message{Type: "demo", Data: "end"})
-			network.SendMessage(e.Players[1].User.Conn, network.Message{Type: "demo", Data: "end"})
-			return
-		}
-	}
+func (e *Engine) Start() {
+	log.Println("Match started")
+	go runtime(e)
+	go handleCommand(e)
 }
 
-func runtime(duration time.Duration, e *Engine) {
+func runtime(e *Engine) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -109,12 +79,37 @@ func runtime(duration time.Duration, e *Engine) {
 			network.SendMessage(e.Players[1].User.Conn, network.Message{Type: config.MsgStateUpdate, Data: e.Players[1].Mana})
 
 			// Check duration
-			if e.Tick >= int(duration.Seconds()) {
+			if e.Tick >= int(config.MatchDuration.Seconds()) {
 				e.End <- true
 				return
 			}
-		case <-e.Interrupt:
+		case <-e.End:
+			log.Println("Match ended")
+			return
+		}
+	}
+}
+
+func handleCommand(e *Engine) {
+	for {
+		select {
+		case msg := <-e.Players[0].User.Talk:
+			fmt.Println(msg)
+		case msg := <-e.Players[1].User.Talk:
+			fmt.Println(msg)
+		case <-e.Players[0].User.Interrupt:
+			fmt.Println("Player 1 disconnected")
 			e.End <- true
+			if e.OnRequeue != nil {
+				e.OnRequeue(&e.Players[1].User)
+			}
+			return
+		case <-e.Players[1].User.Interrupt:
+			fmt.Println("Player 2 disconnected")
+			e.End <- true
+			if e.OnRequeue != nil {
+				e.OnRequeue(&e.Players[0].User)
+			}
 			return
 		}
 	}
