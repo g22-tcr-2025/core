@@ -6,10 +6,13 @@ type Command struct {
 }
 
 type CombatResult struct {
-	Attacker     string  `json:"attacker"`
-	Defender     string  `json:"defender"`
-	UsingTroop   Troop   `json:"using_troop"`
-	TargetTower  Tower   `json:"target_tower"`
-	DamgeToTroop float64 `json:"dmg_to_troop"`
-	DamgeToTower float64 `json:"dmg_to_tower"`
+	Attacker             string  `json:"attacker"`
+	Defender             string  `json:"defender"`
+	UsingTroop           Troop   `json:"using_troop"`
+	TargetTower          Tower   `json:"target_tower"`
+	DamgeToTroop         float64 `json:"dmg_to_troop"`
+	DamgeToTroopOrigin   float64 `json:"dmg_to_troop_origin"`
+	DamgeToTroopAddition float64 `json:"dmg_to_troop_addition"`
+	DefenseDamgeToTroop  float64 `json:"defense_dmg_to_troop"`
+	DamgeToTower         float64 `json:"dmg_to_tower"`
 }

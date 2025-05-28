@@ -58,11 +58,20 @@ func (p *Player) Attack(o *Player, command *Command) (network.Message, error) {
 	crit := tower.HasCrit()
 
 	var dmgToTroop float64
+	var dmgToTroopOrigin float64
+	var dmgToTroopAddition float64
+	var defenseDmgToTroop float64
+
 	if crit {
 		dmgToTroop = max(tower.ATK*1.2-troop.DEF, 0.0)
-		fmt.Printf("Bump!!! %s Has crit with %.f damage to %s troop!!!!", p.User.Metadata.Username, dmgToTroop, troop.Name)
+		dmgToTroopOrigin = tower.ATK
+		dmgToTroopAddition = tower.ATK * 0.2
+		defenseDmgToTroop = tower.DEF
 	} else {
 		dmgToTroop = max(tower.ATK-troop.DEF, 0.0)
+		dmgToTroopOrigin = tower.ATK
+		dmgToTroopAddition = 0
+		defenseDmgToTroop = tower.DEF
 	}
 	troop.HP = max(troop.HP-dmgToTroop, 0.0)
 
@@ -70,11 +79,14 @@ func (p *Player) Attack(o *Player, command *Command) (network.Message, error) {
 	tower.HP = max(tower.HP-dmgToTower, 0.0)
 
 	return network.Message{Type: config.MsgAttackResult, Data: CombatResult{
-		Attacker:     p.User.Metadata.Username,
-		Defender:     o.User.Metadata.Username,
-		UsingTroop:   *troop,
-		TargetTower:  *tower,
-		DamgeToTroop: dmgToTroop,
-		DamgeToTower: dmgToTower,
+		Attacker:             p.User.Metadata.Username,
+		Defender:             o.User.Metadata.Username,
+		UsingTroop:           *troop,
+		TargetTower:          *tower,
+		DamgeToTroop:         dmgToTroop,
+		DamgeToTroopOrigin:   dmgToTroopOrigin,
+		DamgeToTroopAddition: dmgToTroopAddition,
+		DefenseDamgeToTroop:  defenseDmgToTroop,
+		DamgeToTower:         dmgToTower,
 	}}, nil
 }

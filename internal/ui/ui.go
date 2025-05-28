@@ -245,14 +245,17 @@ func troopString(index int, troop game.Troop) string {
 func combatString(combatResult game.CombatResult) []string {
 	rs := []string{}
 
-	str := combatResult.Attacker
-	str += fmt.Sprintf(" ⚔️  %s", combatResult.Defender)
+	str := fmt.Sprintf("%s ⚔️  %s", combatResult.Attacker, combatResult.Defender)
 	rs = append(rs, str)
 
 	str = fmt.Sprintf("🤖 %s ⚔️  %s 🏰", combatResult.UsingTroop.Name, combatResult.TargetTower.Type)
 	rs = append(rs, str)
 
-	str = fmt.Sprintf("🤖 (-%d🩸) ⚔️  🏰 (-%d🩸)", int(math.Ceil(combatResult.DamgeToTroop)), int(math.Ceil(combatResult.DamgeToTower)))
+	if combatResult.DamgeToTroopAddition == 0 {
+		str = fmt.Sprintf("🤖 -%d🩸 ⚔️  🏰 -%d🩸", int(math.Ceil(combatResult.DamgeToTroop)), int(math.Ceil(combatResult.DamgeToTower)))
+	} else {
+		str = fmt.Sprintf("🤖 -%d🩸 (%d 🗡️ %d💥 %d🛡️ ) ⚔️  🏰 -%d🩸", int(math.Ceil(combatResult.DamgeToTroop)), int(math.Ceil(combatResult.DamgeToTroopOrigin)), int(math.Ceil(combatResult.DamgeToTroopAddition)), int(math.Ceil(combatResult.DefenseDamgeToTroop)), int(math.Ceil(combatResult.DamgeToTower)))
+	}
 	rs = append(rs, str)
 
 	return rs
