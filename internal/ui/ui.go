@@ -5,6 +5,7 @@ import (
 	"clash-royale/internal/config"
 	"clash-royale/internal/game"
 	"clash-royale/internal/network"
+	"clash-royale/pkg/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,15 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
+)
+
+const (
+	borderTop       = "╭───────────────────────────────────────────────────────╮"
+	borderLeftRight = "│"
+	borderMiddle    = "├───────────────────────────────────────────────────────┤"
+	borderBottom    = "╰───────────────────────────────────────────────────────╯"
+	tempContent     = "                                                     "
 )
 
 func ListenServer(conn net.Conn) {
@@ -29,14 +39,14 @@ func ListenServer(conn net.Conn) {
 			var template game.MatchData
 			json.Unmarshal(msg.Data.(json.RawMessage), &template)
 			RenderTemplate(template)
-		case config.MsgUpdatePlayerMnana:
-			var mana float64
-			json.Unmarshal(msg.Data.(json.RawMessage), &mana)
-			RenderPlayerMana(mana)
-		case config.MsgUpdateOpponentMana:
-			var mana float64
-			json.Unmarshal(msg.Data.(json.RawMessage), &mana)
-			RenderOpponentMana(mana)
+		// case config.MsgUpdatePlayerMnana:
+		// 	var mana float64
+		// 	json.Unmarshal(msg.Data.(json.RawMessage), &mana)
+		// 	RenderPlayerMana(mana)
+		// case config.MsgUpdateOpponentMana:
+		// 	var mana float64
+		// 	json.Unmarshal(msg.Data.(json.RawMessage), &mana)
+		// 	RenderOpponentMana(mana)
 		case config.MsgAttackResult:
 			var combatResult game.CombatResult
 			json.Unmarshal(msg.Data.(json.RawMessage), &combatResult)
@@ -144,37 +154,60 @@ func ClearInput() {
 func RenderTemplate(matchData game.MatchData) {
 	ClearScreen()
 
-	fmt.Println("============ You ============")
-	fmt.Printf("============ %s - %d ============\n", matchData.PUsername, int(matchData.PLevel))
-	fmt.Println(manaString(matchData.PMana))
-	fmt.Println()
+	// Timer
+	fmt.Println(centerTitle("Timer", borderTop))
+	fmt.Printf("%s\n", centerContent(durationString(0), borderTop))
+	fmt.Println(borderBottom)
+
+	// Player
+	fmt.Println(centerTitle("You - Level", borderTop))
+	fmt.Println(centerContent(fmt.Sprintf("%s - %d", matchData.PUsername, int(matchData.PLevel)), borderTop))
+	fmt.Println(borderMiddle)
+	fmt.Println(centerContent(manaString(matchData.PMana), borderTop))
+	fmt.Println(borderMiddle)
 	for i, troop := range matchData.PTroops {
-		fmt.Println(troopString(i, troop))
+		fmt.Println("│ " + troopString(i, troop) + "\t│")
 	}
-	fmt.Println()
+	fmt.Println(borderMiddle)
 	for i, tower := range matchData.PTowers {
-		fmt.Println(towerString(i, tower))
+		fmt.Println("│ " + towerString(i, tower) + " \t\t│")
 	}
-	fmt.Println()
+	fmt.Println(borderBottom)
 
-	fmt.Println("============ Opponent ============")
-	fmt.Printf("============ %s - %d ============\n", matchData.OUsername, int(matchData.OLevel))
-	fmt.Println(manaString(matchData.OMana))
-	fmt.Println()
+	// Opponent
+	fmt.Println(centerTitle("Opponent - Level", borderTop))
+	fmt.Println(centerContent(fmt.Sprintf("%s - %d", matchData.OUsername, int(matchData.OLevel)), borderTop))
+	fmt.Println(borderMiddle)
+	fmt.Println(centerContent(manaString(matchData.OMana), borderTop))
+	fmt.Println(borderMiddle)
 	for i, troop := range matchData.OTroops {
-		fmt.Println(troopString(i, troop))
+		fmt.Println("│ " + troopString(i, troop) + "\t│")
 	}
-	fmt.Println()
+	fmt.Println(borderMiddle)
 	for i, tower := range matchData.OTowers {
-		fmt.Println(towerString(i, tower))
+		fmt.Println("│ " + towerString(i, tower) + " \t\t│")
 	}
-	fmt.Println()
+	fmt.Println(borderBottom)
 
-	fmt.Println(":: ")
-	fmt.Println()
+	fmt.Println(centerTitle("Notification", borderTop))
+	fmt.Println(centerContent(tempContent, borderTop))
+	fmt.Println(borderBottom)
 
-	fmt.Println("Command: <troop_index> <tower_index>")
+	fmt.Println(centerTitle("Command", borderTop))
+	fmt.Println(centerContent("<troop_index> <tower_index>", borderTop))
+	fmt.Println(borderBottom)
 	fmt.Print(">> ")
+}
+
+func durationString(current int) string {
+	elapsed := time.Duration(current) * time.Second
+
+	remain := config.MatchDuration - elapsed
+
+	minutes := int(remain.Minutes())
+	seconds := int(remain.Seconds()) % 60
+
+	return fmt.Sprintf("%d:%02d", minutes, seconds)
 }
 
 func troopString(index int, troop game.Troop) string {
@@ -187,7 +220,7 @@ func troopString(index int, troop game.Troop) string {
 	}
 	str += fmt.Sprintf("\t\t❤️ %d", int(troop.HP))
 	str += fmt.Sprintf("\t🛡️ %d", int(troop.DEF))
-	str += fmt.Sprintf("\t⚔️ %d", int(troop.ATK))
+	str += fmt.Sprintf("\t🗡️ %d", int(troop.ATK))
 	str += fmt.Sprintf("\t💧 %d", int(troop.Mana))
 
 	return str
@@ -195,11 +228,45 @@ func troopString(index int, troop game.Troop) string {
 
 func combatString(combatResult game.CombatResult) string {
 	str := combatResult.Attacker
-	str += fmt.Sprintf(" 🎯 %s", combatResult.Defender)
+	str += fmt.Sprintf(" ⚔️ %s", combatResult.Defender)
 	str += fmt.Sprintf(" | 🤖 %s ⛏️  %s 🏰", combatResult.UsingTroop.Name, combatResult.TargetTower.Type)
 	str += fmt.Sprintf(" | 🤖 (-%d🩸) ~ 🏰 (-%d🩸)", int(math.Ceil(combatResult.DamgeToTroop)), int(math.Ceil(combatResult.DamgeToTower)))
 
 	return str
+}
+
+func centerContent(content string, lineBase string) string {
+	lineLength := utils.StringDisplayWidth(lineBase)
+
+	innerWidth := lineLength - 4
+	contentWidth := utils.StringDisplayWidth(content)
+	if contentWidth >= innerWidth {
+		return "│ " + content + " │"
+	}
+
+	padding := innerWidth - contentWidth
+
+	leftPadding := padding / 2
+	rightPadding := padding - leftPadding
+
+	return "│ " + strings.Repeat(" ", leftPadding) + content + strings.Repeat(" ", rightPadding) + " │"
+}
+
+func centerTitle(content string, lineBase string) string {
+	lineLength := utils.StringDisplayWidth(lineBase)
+
+	innerWidth := lineLength - 4
+	contentWidth := utils.StringDisplayWidth(content)
+	if contentWidth >= innerWidth {
+		return "╭ " + content + " ╮"
+	}
+
+	padding := innerWidth - contentWidth
+
+	leftPadding := padding / 2
+	rightPadding := padding - leftPadding
+
+	return "╭" + strings.Repeat("─", leftPadding) + " " + content + " " + strings.Repeat("─", rightPadding) + "╮"
 }
 
 func towerString(index int, tower game.Tower) string {
@@ -212,7 +279,7 @@ func towerString(index int, tower game.Tower) string {
 	}
 	str += fmt.Sprintf("\t❤️ %d", int(tower.HP))
 	str += fmt.Sprintf("\t🛡️ %d", int(tower.DEF))
-	str += fmt.Sprintf("\t⚔️ %d", int(tower.ATK))
+	str += fmt.Sprintf("\t🗡️ %d", int(tower.ATK))
 
 	return str
 }
