@@ -15,4 +15,6 @@ type CombatResult struct {
 	DamgeToTroopAddition float64 `json:"dmg_to_troop_addition"`
 	DefenseDamgeToTroop  float64 `json:"defense_dmg_to_troop"`
 	DamgeToTower         float64 `json:"dmg_to_tower"`
+	DamgeToTowerOrigin   float64 `json:"dmg_to_tower_origin"`
+	DefenseDamgeToTower  float64 `json:"defense_dmg_to_tower"`
 }

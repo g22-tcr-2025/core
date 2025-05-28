@@ -19,11 +19,11 @@ import (
 )
 
 const (
-	borderTop       = "╭───────────────────────────────────────────────────────╮"
+	borderTop       = "╭───────────────────────────────────────────────────────────────╮"
 	borderLeftRight = "│"
-	borderMiddle    = "├───────────────────────────────────────────────────────┤"
-	borderBottom    = "╰───────────────────────────────────────────────────────╯"
-	tempContent     = "                                                     "
+	borderMiddle    = "├───────────────────────────────────────────────────────────────┤"
+	borderBottom    = "╰───────────────────────────────────────────────────────────────╯"
+	tempContent     = "                                                             "
 )
 
 func ListenServer(conn net.Conn) {
@@ -57,10 +57,11 @@ func ListenServer(conn net.Conn) {
 
 			RenderPlayerMana(matchData.PMana)
 			RenderPlayerTroops(matchData.PTroops)
+			RenderPlayerTowers(matchData.PTowers)
 
 			RenderOpponentMana(matchData.OMana)
 			RenderOpponentTroops(matchData.OTroops)
-
+			RenderOpponentTowers(matchData.OTowers)
 		case config.MsgAttackResult:
 			var combatResult game.CombatResult
 			json.Unmarshal(msg.Data.(json.RawMessage), &combatResult)
@@ -169,13 +170,13 @@ func RenderTemplate(matchData game.MatchData) {
 	ClearScreen()
 
 	// Timer
-	fmt.Println(centerTitle("Timer", borderTop))
+	fmt.Println(centerTitle("⏳ Timer ⏳", borderTop))
 	fmt.Printf("%s\n", centerContent(durationString(0), borderTop))
 	fmt.Println(borderBottom)
 
 	// Player
-	fmt.Println(centerTitle("You - Level", borderTop))
-	fmt.Println(centerContent(fmt.Sprintf("%s - %d", matchData.PUsername, int(matchData.PLevel)), borderTop))
+	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", matchData.PUsername), borderTop))
+	fmt.Println(centerContent(fmt.Sprintf("%d", int(matchData.PLevel)), borderTop))
 	fmt.Println(borderMiddle)
 	fmt.Println(centerContent(manaString(matchData.PMana), borderTop))
 	fmt.Println(borderMiddle)
@@ -184,13 +185,13 @@ func RenderTemplate(matchData game.MatchData) {
 	}
 	fmt.Println(borderMiddle)
 	for i, tower := range matchData.PTowers {
-		fmt.Println("│ " + towerString(i, tower) + " \t\t│")
+		fmt.Println("│ " + towerString(i, tower) + "\t\t\t│")
 	}
 	fmt.Println(borderBottom)
 
 	// Opponent
-	fmt.Println(centerTitle("Opponent - Level", borderTop))
-	fmt.Println(centerContent(fmt.Sprintf("%s - %d", matchData.OUsername, int(matchData.OLevel)), borderTop))
+	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", matchData.OUsername), borderTop))
+	fmt.Println(centerContent(fmt.Sprintf("%d", int(matchData.OLevel)), borderTop))
 	fmt.Println(borderMiddle)
 	fmt.Println(centerContent(manaString(matchData.OMana), borderTop))
 	fmt.Println(borderMiddle)
@@ -199,7 +200,7 @@ func RenderTemplate(matchData game.MatchData) {
 	}
 	fmt.Println(borderMiddle)
 	for i, tower := range matchData.OTowers {
-		fmt.Println("│ " + towerString(i, tower) + " \t\t│")
+		fmt.Println("│ " + towerString(i, tower) + "\t\t\t│")
 	}
 	fmt.Println(borderBottom)
 
@@ -237,7 +238,8 @@ func troopString(index int, troop game.Troop) string {
 	str += fmt.Sprintf("\t\t❤️ %d", int(troop.HP))
 	str += fmt.Sprintf("\t🛡️ %d", int(troop.DEF))
 	str += fmt.Sprintf("\t🗡️ %d", int(troop.ATK))
-	str += fmt.Sprintf("\t💧 %d", int(troop.Mana))
+	str += fmt.Sprintf("\t💧%d", int(troop.Mana))
+	str += fmt.Sprintf("\t🧪%d", int(troop.EXP))
 
 	return str
 }
@@ -252,9 +254,9 @@ func combatString(combatResult game.CombatResult) []string {
 	rs = append(rs, str)
 
 	if combatResult.DamgeToTroopAddition == 0 {
-		str = fmt.Sprintf("🤖 -%d🩸 ⚔️  🏰 -%d🩸", int(math.Ceil(combatResult.DamgeToTroop)), int(math.Ceil(combatResult.DamgeToTower)))
+		str = fmt.Sprintf("🤖 -%d🩸 (%d🗡️  %d🛡️ ) ⚔️  🏰 -%d🩸 (%d🗡️  %d🛡️ )", int(math.Ceil(combatResult.DamgeToTroop)), int(math.Ceil(combatResult.DamgeToTroopOrigin)), int(math.Ceil(combatResult.DefenseDamgeToTroop)), int(math.Ceil(combatResult.DamgeToTower)), int(math.Ceil(combatResult.DamgeToTowerOrigin)), int(math.Ceil(combatResult.DefenseDamgeToTower)))
 	} else {
-		str = fmt.Sprintf("🤖 -%d🩸 (%d 🗡️ %d💥 %d🛡️ ) ⚔️  🏰 -%d🩸", int(math.Ceil(combatResult.DamgeToTroop)), int(math.Ceil(combatResult.DamgeToTroopOrigin)), int(math.Ceil(combatResult.DamgeToTroopAddition)), int(math.Ceil(combatResult.DefenseDamgeToTroop)), int(math.Ceil(combatResult.DamgeToTower)))
+		str = fmt.Sprintf("🤖 -%d🩸 (%d🗡️  %d💥 %d🛡️ ) ⚔️  🏰 -%d🩸 (%d🗡️  %d🛡️ )", int(math.Ceil(combatResult.DamgeToTroop)), int(math.Ceil(combatResult.DamgeToTroopOrigin)), int(math.Ceil(combatResult.DamgeToTroopAddition)), int(math.Ceil(combatResult.DefenseDamgeToTroop)), int(math.Ceil(combatResult.DamgeToTower)), int(math.Ceil(combatResult.DamgeToTowerOrigin)), int(math.Ceil(combatResult.DefenseDamgeToTower)))
 	}
 	rs = append(rs, str)
 
@@ -362,6 +364,30 @@ func RenderOpponentTroops(troops []game.Troop) {
 		fmt.Printf("\033[%d;1H", 22+i) // Move to line 30 col 1
 		fmt.Print("\033[K")
 		fmt.Print("│ " + troopString(i, troop) + "\t│")
+	}
+
+	fmt.Print("\033[u") // Back to previous
+}
+
+func RenderPlayerTowers(towers []game.Tower) {
+	fmt.Print("\033[s") // Save pointer
+
+	for i, tower := range towers {
+		fmt.Printf("\033[%d;1H", 13+i) // Move to line 30 col 1
+		fmt.Print("\033[K")
+		fmt.Print("│ " + towerString(i, tower) + "\t\t\t│")
+	}
+
+	fmt.Print("\033[u") // Back to previous
+}
+
+func RenderOpponentTowers(towers []game.Tower) {
+	fmt.Print("\033[s") // Save pointer
+
+	for i, tower := range towers {
+		fmt.Printf("\033[%d;1H", 26+i) // Move to line 30 col 1
+		fmt.Print("\033[K")
+		fmt.Print("│ " + towerString(i, tower) + "\t\t\t│")
 	}
 
 	fmt.Print("\033[u") // Back to previous

@@ -23,14 +23,14 @@ func (p *Player) Attack(o *Player, command *Command) (network.Message, error) {
 	}
 	troop := &p.Troops[command.TroopIndex]
 
-	// CASE 1: Not enough mana
-	if p.Mana <= 0 || p.Mana < troop.Mana {
-		return network.Message{Type: config.MsgError, Data: []string{"You don't have enough mana!"}}, fmt.Errorf("not enough mana")
-	}
-
-	// CASE 2: Troop destroyed
+	// CASE 1: Troop destroyed
 	if troop.HP <= 0 {
 		return network.Message{Type: config.MsgError, Data: []string{fmt.Sprintf("🤖 %s destroyed!", troop.Name)}}, fmt.Errorf("troop destroyed")
+	}
+
+	// CASE 2: Not enough mana
+	if p.Mana <= 0 || p.Mana < troop.Mana {
+		return network.Message{Type: config.MsgError, Data: []string{"You don't have enough mana!"}}, fmt.Errorf("not enough mana")
 	}
 
 	// CASE 3: Wrong target tower
@@ -66,16 +66,18 @@ func (p *Player) Attack(o *Player, command *Command) (network.Message, error) {
 		dmgToTroop = max(tower.ATK*1.2-troop.DEF, 0.0)
 		dmgToTroopOrigin = tower.ATK
 		dmgToTroopAddition = tower.ATK * 0.2
-		defenseDmgToTroop = tower.DEF
+		defenseDmgToTroop = troop.DEF
 	} else {
 		dmgToTroop = max(tower.ATK-troop.DEF, 0.0)
 		dmgToTroopOrigin = tower.ATK
 		dmgToTroopAddition = 0
-		defenseDmgToTroop = tower.DEF
+		defenseDmgToTroop = troop.DEF
 	}
 	troop.HP = max(troop.HP-dmgToTroop, 0.0)
 
 	dmgToTower := max(troop.ATK-tower.DEF, 0.0)
+	dmgToTowerOrigin := troop.ATK
+	defenseDmgToTower := tower.DEF
 	tower.HP = max(tower.HP-dmgToTower, 0.0)
 
 	return network.Message{Type: config.MsgAttackResult, Data: CombatResult{
@@ -88,5 +90,7 @@ func (p *Player) Attack(o *Player, command *Command) (network.Message, error) {
 		DamgeToTroopAddition: dmgToTroopAddition,
 		DefenseDamgeToTroop:  defenseDmgToTroop,
 		DamgeToTower:         dmgToTower,
+		DamgeToTowerOrigin:   dmgToTowerOrigin,
+		DefenseDamgeToTower:  defenseDmgToTower,
 	}}, nil
 }
