@@ -175,42 +175,42 @@ func RenderTemplate(matchData game.MatchData) {
 	fmt.Println(borderBottom)
 
 	// Player
-	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", matchData.PUsername), borderTop))
+	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", Color(matchData.PUsername).BrightGreen().Bold().String()), borderTop))
 	fmt.Println(centerContent(fmt.Sprintf("%d", int(matchData.PLevel)), borderTop))
 	fmt.Println(borderMiddle)
 	fmt.Println(centerContent(manaString(matchData.PMana), borderTop))
 	fmt.Println(borderMiddle)
 	for i, troop := range matchData.PTroops {
-		fmt.Println("│ " + troopString(i, troop) + "\t│")
+		fmt.Println("│ " + troopString(i, troop, true) + "\t│")
 	}
 	fmt.Println(borderMiddle)
 	for i, tower := range matchData.PTowers {
-		fmt.Println("│ " + towerString(i, tower) + "\t\t\t│")
+		fmt.Println("│ " + towerString(i, tower, true) + "\t\t\t│")
 	}
 	fmt.Println(borderBottom)
 
 	// Opponent
-	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", matchData.OUsername), borderTop))
+	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", Color(matchData.OUsername).BrightRed().Bold().String()), borderTop))
 	fmt.Println(centerContent(fmt.Sprintf("%d", int(matchData.OLevel)), borderTop))
 	fmt.Println(borderMiddle)
 	fmt.Println(centerContent(manaString(matchData.OMana), borderTop))
 	fmt.Println(borderMiddle)
 	for i, troop := range matchData.OTroops {
-		fmt.Println("│ " + troopString(i, troop) + "\t│")
+		fmt.Println("│ " + troopString(i, troop, false) + "\t│")
 	}
 	fmt.Println(borderMiddle)
 	for i, tower := range matchData.OTowers {
-		fmt.Println("│ " + towerString(i, tower) + "\t\t\t│")
+		fmt.Println("│ " + towerString(i, tower, false) + "\t\t\t│")
 	}
 	fmt.Println(borderBottom)
 
-	fmt.Println(centerTitle("Notification", borderTop))
+	fmt.Println(centerTitle(Color("Notification").BrightYellow().Bold().String(), borderTop))
 	fmt.Println(centerContent(tempContent, borderTop))
 	fmt.Println(centerContent(tempContent, borderTop))
 	fmt.Println(centerContent(tempContent, borderTop))
 	fmt.Println(borderBottom)
 
-	fmt.Println(centerTitle("Command", borderTop))
+	fmt.Println(centerTitle(Color("Command").BrightCyan().Bold().String(), borderTop))
 	fmt.Println(centerContent("<troop_index> <tower_index>", borderTop))
 	fmt.Println(borderBottom)
 	fmt.Print(">> ")
@@ -227,19 +227,30 @@ func durationString(current int) string {
 	return fmt.Sprintf("%d:%02d", minutes, seconds)
 }
 
-func troopString(index int, troop game.Troop) string {
+func troopString(index int, troop game.Troop, position bool) string {
 	str := ""
-	str += fmt.Sprintf("[%d]", index)
 	if troop.HP <= 0 {
-		str += fmt.Sprintf(" 🪦 %s", troop.Name)
+		str += Color(fmt.Sprintf("[%d]", index)).Dim().String()
+		str += fmt.Sprintf(" 🪦 %s", Color(troop.Name).Dim().Strikethrough().String())
+		str += Color(fmt.Sprintf("\t\t🖤 %d", int(troop.HP))).Dim().String()
+		str += Color(fmt.Sprintf("\t🛡️ %d", int(troop.DEF))).Dim().String()
+		str += Color(fmt.Sprintf("\t🗡️ %d", int(troop.ATK))).Dim().String()
+		str += Color(fmt.Sprintf("\t💧%d", int(troop.Mana))).Dim().String()
+		str += Color(fmt.Sprintf("\t🧪%d", int(troop.EXP))).Dim().String()
+
 	} else {
-		str += fmt.Sprintf(" 🤖 %s", troop.Name)
+		if position {
+			str += Color(fmt.Sprintf("[%d]", index)).Green().String()
+		} else {
+			str += Color(fmt.Sprintf("[%d]", index)).Red().String()
+		}
+		str += fmt.Sprintf(" 🤖 %s", Color(troop.Name).BrightWhite().String())
+		str += fmt.Sprintf("\t\t❤️ %d", int(troop.HP))
+		str += fmt.Sprintf("\t🛡️ %d", int(troop.DEF))
+		str += fmt.Sprintf("\t🗡️ %d", int(troop.ATK))
+		str += fmt.Sprintf("\t💧%d", int(troop.Mana))
+		str += fmt.Sprintf("\t🧪%d", int(troop.EXP))
 	}
-	str += fmt.Sprintf("\t\t❤️ %d", int(troop.HP))
-	str += fmt.Sprintf("\t🛡️ %d", int(troop.DEF))
-	str += fmt.Sprintf("\t🗡️ %d", int(troop.ATK))
-	str += fmt.Sprintf("\t💧%d", int(troop.Mana))
-	str += fmt.Sprintf("\t🧪%d", int(troop.EXP))
 
 	return str
 }
@@ -297,17 +308,25 @@ func centerTitle(content string, lineBase string) string {
 	return "╭" + strings.Repeat("─", leftPadding) + " " + content + " " + strings.Repeat("─", rightPadding) + "╮"
 }
 
-func towerString(index int, tower game.Tower) string {
+func towerString(index int, tower game.Tower, position bool) string {
 	str := ""
-	str += fmt.Sprintf("[%d]", index)
 	if tower.HP <= 0 {
-		str += fmt.Sprintf(" 🪨 %s", tower.Type)
+		str += Color(fmt.Sprintf("[%d]", index)).Dim().String()
+		str += fmt.Sprintf(" 🪨 %s", Color(tower.Type).Dim().Strikethrough().String())
+		str += Color(fmt.Sprintf("\t❤️ %d", int(tower.HP))).Dim().String()
+		str += Color(fmt.Sprintf("\t🛡️ %d", int(tower.DEF))).Dim().String()
+		str += Color(fmt.Sprintf("\t🗡️ %d", int(tower.ATK))).Dim().String()
 	} else {
-		str += fmt.Sprintf(" 🏰 %s", tower.Type)
+		if position {
+			str += Color(fmt.Sprintf("[%d]", index)).Green().String()
+		} else {
+			str += Color(fmt.Sprintf("[%d]", index)).Red().String()
+		}
+		str += fmt.Sprintf(" 🏰 %s", Color(tower.Type).BrightWhite().String())
+		str += fmt.Sprintf("\t❤️ %d", int(tower.HP))
+		str += fmt.Sprintf("\t🛡️ %d", int(tower.DEF))
+		str += fmt.Sprintf("\t🗡️ %d", int(tower.ATK))
 	}
-	str += fmt.Sprintf("\t❤️ %d", int(tower.HP))
-	str += fmt.Sprintf("\t🛡️ %d", int(tower.DEF))
-	str += fmt.Sprintf("\t🗡️ %d", int(tower.ATK))
 
 	return str
 }
@@ -351,7 +370,7 @@ func RenderPlayerTroops(troops []game.Troop) {
 	for i, troop := range troops {
 		fmt.Printf("\033[%d;1H", 9+i) // Move to line 30 col 1
 		fmt.Print("\033[K")
-		fmt.Print("│ " + troopString(i, troop) + "\t│")
+		fmt.Print("│ " + troopString(i, troop, true) + "\t│")
 	}
 
 	fmt.Print("\033[u") // Back to previous
@@ -363,7 +382,7 @@ func RenderOpponentTroops(troops []game.Troop) {
 	for i, troop := range troops {
 		fmt.Printf("\033[%d;1H", 22+i) // Move to line 30 col 1
 		fmt.Print("\033[K")
-		fmt.Print("│ " + troopString(i, troop) + "\t│")
+		fmt.Print("│ " + troopString(i, troop, false) + "\t│")
 	}
 
 	fmt.Print("\033[u") // Back to previous
@@ -375,7 +394,7 @@ func RenderPlayerTowers(towers []game.Tower) {
 	for i, tower := range towers {
 		fmt.Printf("\033[%d;1H", 13+i) // Move to line 30 col 1
 		fmt.Print("\033[K")
-		fmt.Print("│ " + towerString(i, tower) + "\t\t\t│")
+		fmt.Print("│ " + towerString(i, tower, true) + "\t\t\t│")
 	}
 
 	fmt.Print("\033[u") // Back to previous
@@ -387,7 +406,7 @@ func RenderOpponentTowers(towers []game.Tower) {
 	for i, tower := range towers {
 		fmt.Printf("\033[%d;1H", 26+i) // Move to line 30 col 1
 		fmt.Print("\033[K")
-		fmt.Print("│ " + towerString(i, tower) + "\t\t\t│")
+		fmt.Print("│ " + towerString(i, tower, false) + "\t\t\t│")
 	}
 
 	fmt.Print("\033[u") // Back to previous
