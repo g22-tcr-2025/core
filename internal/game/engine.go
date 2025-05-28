@@ -102,9 +102,12 @@ func runtime(e *Engine) {
 				}
 			}
 
+			network.SendMessage(e.Players[0].User.Conn, network.Message{Type: config.MsgTick, Data: e.Tick})
 			network.SendMessage(e.Players[0].User.Conn, network.Message{Type: config.MsgUpdatePlayerMnana, Data: e.Players[0].Mana})
 			network.SendMessage(e.Players[0].User.Conn, network.Message{Type: config.MsgUpdateOpponentMana, Data: e.Players[1].Mana})
 
+			// Opponent
+			network.SendMessage(e.Players[1].User.Conn, network.Message{Type: config.MsgTick, Data: e.Tick})
 			network.SendMessage(e.Players[1].User.Conn, network.Message{Type: config.MsgUpdatePlayerMnana, Data: e.Players[1].Mana})
 			network.SendMessage(e.Players[1].User.Conn, network.Message{Type: config.MsgUpdateOpponentMana, Data: e.Players[0].Mana})
 

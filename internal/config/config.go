@@ -6,6 +6,7 @@ const (
 	MsgLogin         = "LOGIN"
 	MsgLoginResponse = "LOGIN_RESPONSE"
 
+	MsgTick       = "TICK"
 	MsgMatchStart = "MATCH_START"
 
 	MsgUpdatePlayerMnana  = "UPDATE_PLAYER_MANA"
