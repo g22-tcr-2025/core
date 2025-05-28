@@ -132,7 +132,31 @@ func handleCommand(e *Engine) {
 			if err != nil {
 				network.SendMessage(e.Players[0].User.Conn, rs)
 			} else {
-				for _, p := range e.Players {
+				for i, p := range e.Players {
+					var playerIndex int
+					var opponentIndex int
+					if i == 0 {
+						playerIndex = 0
+						opponentIndex = 1
+					} else {
+						playerIndex = 1
+						opponentIndex = 0
+					}
+
+					matchData := MatchData{
+						PUsername: e.Players[playerIndex].User.Metadata.Username,
+						PLevel:    e.Players[playerIndex].User.Metadata.Level,
+						PMana:     e.Players[playerIndex].Mana,
+						PTroops:   e.Players[playerIndex].Troops,
+						PTowers:   e.Players[playerIndex].Towers,
+						OUsername: e.Players[opponentIndex].User.Metadata.Username,
+						OLevel:    e.Players[opponentIndex].User.Metadata.Level,
+						OMana:     e.Players[opponentIndex].Mana,
+						OTroops:   e.Players[opponentIndex].Troops,
+						OTowers:   e.Players[opponentIndex].Towers,
+					}
+
+					network.SendMessage(p.User.Conn, network.Message{Type: config.MsgMatchUpdate, Data: matchData})
 					network.SendMessage(p.User.Conn, rs)
 				}
 			}
@@ -144,7 +168,31 @@ func handleCommand(e *Engine) {
 			if err != nil {
 				network.SendMessage(e.Players[1].User.Conn, rs)
 			} else {
-				for _, p := range e.Players {
+				for i, p := range e.Players {
+					var playerIndex int
+					var opponentIndex int
+					if i == 0 {
+						playerIndex = 0
+						opponentIndex = 1
+					} else {
+						playerIndex = 1
+						opponentIndex = 0
+					}
+
+					matchData := MatchData{
+						PUsername: e.Players[playerIndex].User.Metadata.Username,
+						PLevel:    e.Players[playerIndex].User.Metadata.Level,
+						PMana:     e.Players[playerIndex].Mana,
+						PTroops:   e.Players[playerIndex].Troops,
+						PTowers:   e.Players[playerIndex].Towers,
+						OUsername: e.Players[opponentIndex].User.Metadata.Username,
+						OLevel:    e.Players[opponentIndex].User.Metadata.Level,
+						OMana:     e.Players[opponentIndex].Mana,
+						OTroops:   e.Players[opponentIndex].Troops,
+						OTowers:   e.Players[opponentIndex].Towers,
+					}
+
+					network.SendMessage(p.User.Conn, network.Message{Type: config.MsgMatchUpdate, Data: matchData})
 					network.SendMessage(p.User.Conn, rs)
 				}
 			}

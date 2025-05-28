@@ -51,6 +51,16 @@ func ListenServer(conn net.Conn) {
 			var mana float64
 			json.Unmarshal(msg.Data.(json.RawMessage), &mana)
 			RenderOpponentMana(mana)
+		case config.MsgMatchUpdate:
+			var matchData game.MatchData
+			json.Unmarshal(msg.Data.(json.RawMessage), &matchData)
+
+			RenderPlayerMana(matchData.PMana)
+			RenderPlayerTroops(matchData.PTroops)
+
+			RenderOpponentMana(matchData.OMana)
+			RenderOpponentTroops(matchData.OTroops)
+
 		case config.MsgAttackResult:
 			var combatResult game.CombatResult
 			json.Unmarshal(msg.Data.(json.RawMessage), &combatResult)
@@ -328,6 +338,30 @@ func manaString(mana float64) string {
 		str += "💧"
 	}
 	return str
+}
+
+func RenderPlayerTroops(troops []game.Troop) {
+	fmt.Print("\033[s") // Save pointer
+
+	for i, troop := range troops {
+		fmt.Printf("\033[%d;1H", 9+i) // Move to line 30 col 1
+		fmt.Print("\033[K")
+		fmt.Print("│ " + troopString(i, troop) + "\t│")
+	}
+
+	fmt.Print("\033[u") // Back to previous
+}
+
+func RenderOpponentTroops(troops []game.Troop) {
+	fmt.Print("\033[s") // Save pointer
+
+	for i, troop := range troops {
+		fmt.Printf("\033[%d;1H", 22+i) // Move to line 30 col 1
+		fmt.Print("\033[K")
+		fmt.Print("│ " + troopString(i, troop) + "\t│")
+	}
+
+	fmt.Print("\033[u") // Back to previous
 }
 
 func RenderNotification(content ...string) {
