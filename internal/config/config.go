@@ -9,6 +9,7 @@ const (
 	MsgTick        = "TICK"
 	MsgMatchStart  = "MATCH_START"
 	MsgMatchUpdate = "MATCH_UPDATE"
+	MsgMatchEnd    = "MATCH_END"
 
 	MsgUpdatePlayerMnana  = "UPDATE_PLAYER_MANA"
 	MsgUpdateOpponentMana = "UPDATE_OPPONENT_MANA"
@@ -18,5 +19,5 @@ const (
 
 	MsgError = "ERROR"
 
-	MatchDuration = 5 * time.Minute
+	MatchDuration = 5 * time.Second
 )

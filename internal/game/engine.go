@@ -5,6 +5,7 @@ import (
 	"clash-royale/internal/network"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -13,42 +14,62 @@ import (
 type Engine struct {
 	Players   []*Player
 	Tick      int
+	Interrupt chan bool
 	End       chan bool
 	OnRequeue func(u *User)
 }
 
 func NewEngine(u1, u2 *User, onRequeue func(u *User)) *Engine {
 	p1 := Player{
-		User:   *u1,
+		User:   u1,
 		Mana:   5.0,
 		EXP:    0.0,
 		Troops: randomTroop(u1.Metadata.Troops),
-		Towers: u1.Metadata.Towers,
+		Towers: copyTowers(u1.Metadata.Towers),
 		Mutex:  sync.Mutex{},
 	}
 
 	p2 := Player{
-		User:   *u2,
+		User:   u2,
 		Mana:   5.0,
 		EXP:    0.0,
 		Troops: randomTroop(u2.Metadata.Troops),
-		Towers: u2.Metadata.Towers,
+		Towers: copyTowers(u2.Metadata.Towers),
 		Mutex:  sync.Mutex{},
 	}
 
 	return &Engine{
 		Players:   []*Player{&p1, &p2},
 		Tick:      0,
+		Interrupt: make(chan bool),
 		End:       make(chan bool),
 		OnRequeue: onRequeue,
 	}
 }
 
-func randomTroop(troops []Troop) []Troop {
-	rand.Shuffle(len(troops), func(i, j int) {
-		troops[i], troops[j] = troops[j], troops[i]
+func randomTroop(troops []*Troop) []Troop {
+	tempTroops := make([]Troop, len(troops))
+	for i := range len(troops) {
+		tempTroops[i] = *troops[i]
+	}
+
+	rand.Shuffle(len(tempTroops), func(i, j int) {
+		tempTroops[i], tempTroops[j] = tempTroops[j], tempTroops[i]
 	})
-	return troops[:3]
+
+	result := make([]Troop, 3)
+	for i := range 3 {
+		result[i] = tempTroops[i]
+	}
+	return result
+}
+
+func copyTowers(towers []*Tower) []Tower {
+	rs := make([]Tower, len(towers))
+	for i := range len(towers) {
+		rs[i] = *towers[i]
+	}
+	return rs
 }
 
 func (e *Engine) Start() {
@@ -82,6 +103,7 @@ func (e *Engine) Start() {
 
 	go runtime(e)
 	go handleCommand(e)
+	go handleGameEnd(e)
 }
 
 func runtime(e *Engine) {
@@ -113,9 +135,13 @@ func runtime(e *Engine) {
 
 			// Check duration
 			if e.Tick >= int(config.MatchDuration.Seconds()) {
+				fmt.Println("ended timer")
+				e.End <- true
 				return
 			}
-		case <-e.End:
+		case <-e.Interrupt:
+			fmt.Println("match interrrupt!")
+			e.End <- true
 			return
 		}
 	}
@@ -197,19 +223,107 @@ func handleCommand(e *Engine) {
 				}
 			}
 		case <-e.Players[0].User.Interrupt:
-			fmt.Println("Player 1 disconnected")
-			e.End <- true
+			fmt.Printf("Player %s disconnected\n", e.Players[0].User.Metadata.Username)
+			e.Interrupt <- true
 			if e.OnRequeue != nil {
-				e.OnRequeue(&e.Players[1].User)
+				e.OnRequeue(e.Players[1].User)
 			}
 			return
 		case <-e.Players[1].User.Interrupt:
-			fmt.Println("Player 2 disconnected")
-			e.End <- true
+			fmt.Printf("Player %s disconnected\n", e.Players[1].User.Metadata.Username)
+			e.Interrupt <- true
 			if e.OnRequeue != nil {
-				e.OnRequeue(&e.Players[0].User)
+				e.OnRequeue(e.Players[0].User)
 			}
 			return
 		}
+	}
+}
+
+func handleGameEnd(e *Engine) {
+	if <-e.End {
+		player1 := e.Players[0]
+		player2 := e.Players[1]
+
+		winner := whoWin(player1, player2)
+
+		if winner != nil {
+			winner.User.Metadata.EXP += 30.0
+
+			doesUpgradeLevel(winner)
+
+			for _, p := range e.Players {
+				network.SendMessage(p.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
+					"Game Over! (Next round in 5 seconds...)",
+					fmt.Sprintf("Winner: %s", winner.User.Metadata.Username),
+					fmt.Sprintf("+%d EXP => Level: %d", 30, int(winner.User.Metadata.Level)),
+				}})
+			}
+		} else {
+			// Draw
+
+			player1.User.Metadata.EXP += 10.0
+			player2.User.Metadata.EXP += 10.0
+
+			doesUpgradeLevel(player1)
+			doesUpgradeLevel(player2)
+
+			for _, p := range e.Players {
+				network.SendMessage(p.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
+					"Daw!!! (Next round in 5 seconds...)",
+					fmt.Sprintf("Player: %s + %d EXP => Level: %d", player1.User.Metadata.Username, 10, int(player1.User.Metadata.Level)),
+					fmt.Sprintf("Player: %s + %d EXP => Level: %d", player2.User.Metadata.Username, 10, int(player2.User.Metadata.Level)),
+				}})
+			}
+		}
+	}
+}
+
+func whoWin(p1, p2 *Player) *Player {
+	for i := range 3 {
+		t1 := p1.Towers[i]
+		t2 := p2.Towers[i]
+
+		if t1.HP < t2.HP {
+			return p2
+		} else if t1.HP > t2.HP {
+			return p1
+		}
+	}
+	return nil
+}
+
+func doesUpgradeLevel(p *Player) {
+	baseEXP := 100.0
+
+	currentLevel := p.User.Metadata.Level
+	currentEXP := p.User.Metadata.EXP
+
+	requiredEXP := baseEXP * math.Pow(1.1, currentLevel)
+	remainEXP := currentEXP - requiredEXP
+
+	if remainEXP >= 0 {
+		// Can upgrade
+		p.User.Metadata.Level++
+		p.User.Metadata.EXP = remainEXP
+
+		for _, troop := range p.User.Metadata.Troops {
+			troop.ATK *= 1.1
+			troop.DEF *= 1.1
+			troop.EXP *= 1.1
+			troop.HP *= 1.1
+			troop.Mana *= 1.1
+		}
+
+		for _, tower := range p.User.Metadata.Towers {
+			tower.ATK *= 1.1
+			tower.DEF *= 1.1
+			tower.EXP *= 1.1
+			tower.HP *= 1.1
+			tower.Crit *= 1.1
+
+		}
+
+		p.User.Metadata.SaveAll()
 	}
 }

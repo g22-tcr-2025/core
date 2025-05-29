@@ -6,11 +6,6 @@ import (
 	"net"
 )
 
-const (
-	MsgMatchStart = "MATCH_START"
-	MsgMatchEnd   = "MATCH_END"
-)
-
 type Message struct {
 	Type string `json:"type"`
 	Data any    `json:"data"`

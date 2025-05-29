@@ -8,7 +8,7 @@ import (
 )
 
 type Player struct {
-	User   User    `json:"user"`
+	User   *User   `json:"user"`
 	Mana   float64 `json:"mana"`
 	EXP    float64 `json:"exp"`
 	Troops []Troop `json:"troops"`

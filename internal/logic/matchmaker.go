@@ -38,21 +38,24 @@ func (m *MatchMaker) HandleConnection(conn net.Conn) {
 	ok := m.UserStore.Validate(loginData)
 	network.SendMessage(conn, network.Message{Type: config.MsgLoginResponse, Data: ok})
 	if !ok {
+		conn.Close()
 		return
 	}
 
+	// After login successfully
 	data.EnsureMetadata(loginData.Username)
 	userMetadata, _ := data.LoadMetadata(loginData.Username)
 
 	user := game.User{
 		Conn:      conn,
-		Metadata:  *userMetadata,
+		Metadata:  userMetadata,
 		Talk:      make(chan network.Message),
 		Interrupt: make(chan bool),
 	}
 
 	go user.ListenUser()
 
+	// Adding user to queue
 	m.mutext.Lock()
 	m.queue = append(m.queue, &user)
 	m.tryMatch()

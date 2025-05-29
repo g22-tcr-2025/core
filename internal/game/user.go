@@ -16,16 +16,16 @@ type LoginData struct {
 }
 
 type UserMetadata struct {
-	Username string  `json:"username"`
-	EXP      float64 `json:"exp"`
-	Level    float64 `json:"level"`
-	Troops   []Troop `json:"troops"`
-	Towers   []Tower `json:"towers"`
+	Username string   `json:"username"`
+	EXP      float64  `json:"exp"`
+	Level    float64  `json:"level"`
+	Troops   []*Troop `json:"troops"`
+	Towers   []*Tower `json:"towers"`
 }
 
 type User struct {
 	Conn      net.Conn
-	Metadata  UserMetadata
+	Metadata  *UserMetadata
 	Talk      chan network.Message
 	Interrupt chan bool
 }
@@ -47,8 +47,8 @@ func (u *User) ListenUser() error {
 }
 
 func (um *UserMetadata) SaveAll() error {
-	usersDir := filepath.Join("assets/metadata")
-	if err := saveJSON(filepath.Join(usersDir, um.Username+".json"), um); err != nil {
+	usersDir := filepath.Join("assets", "metadata", um.Username)
+	if err := saveJSON(filepath.Join(usersDir, "metadata.json"), um); err != nil {
 		return err
 	}
 	return nil

@@ -9,8 +9,8 @@ import (
 )
 
 type templateStandard struct {
-	Troops []game.Troop `json:"troops"`
-	Towers []game.Tower `json:"towers"`
+	Troops []*game.Troop `json:"troops"`
+	Towers []*game.Tower `json:"towers"`
 }
 
 func EnsureMetadata(username string) error {
