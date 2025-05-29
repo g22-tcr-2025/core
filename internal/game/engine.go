@@ -12,11 +12,12 @@ import (
 )
 
 type Engine struct {
-	Players   []*Player
-	Tick      int
-	Interrupt chan bool
-	End       chan bool
-	OnRequeue func(u *User)
+	Players               []*Player
+	Tick                  int            // Timer
+	Interrupt             chan *User     // User disconnected => Remain user
+	TimerEnd              chan bool      // Timer end counting
+	KingOrTroopsDestroyed chan []*Player // King Destoyed => Winner
+	OnRequeue             func(u *User)  // Move user back to the queue
 }
 
 func NewEngine(u1, u2 *User, onRequeue func(u *User)) *Engine {
@@ -39,11 +40,12 @@ func NewEngine(u1, u2 *User, onRequeue func(u *User)) *Engine {
 	}
 
 	return &Engine{
-		Players:   []*Player{&p1, &p2},
-		Tick:      0,
-		Interrupt: make(chan bool),
-		End:       make(chan bool),
-		OnRequeue: onRequeue,
+		Players:               []*Player{&p1, &p2},
+		Tick:                  0,
+		Interrupt:             make(chan *User),
+		TimerEnd:              make(chan bool),
+		KingOrTroopsDestroyed: make(chan []*Player),
+		OnRequeue:             onRequeue,
 	}
 }
 
@@ -136,12 +138,12 @@ func runtime(e *Engine) {
 			// Check duration
 			if e.Tick >= int(config.MatchDuration.Seconds()) {
 				fmt.Println("ended timer")
-				e.End <- true
+
+				e.TimerEnd <- true
 				return
 			}
-		case <-e.Interrupt:
-			fmt.Println("match interrrupt!")
-			e.End <- true
+		case <-e.TimerEnd:
+			fmt.Println("ended timer by interrupt")
 			return
 		}
 	}
@@ -184,6 +186,24 @@ func handleCommand(e *Engine) {
 
 					network.SendMessage(p.User.Conn, network.Message{Type: config.MsgMatchUpdate, Data: matchData})
 					network.SendMessage(p.User.Conn, rs)
+
+					// All troops destroyed
+					troopCount := 0
+					for _, troop := range e.Players[playerIndex].Troops {
+						if troop.HP <= 0 {
+							troopCount++
+						}
+					}
+					if troopCount >= 3 {
+						e.KingOrTroopsDestroyed <- []*Player{e.Players[opponentIndex], e.Players[playerIndex]}
+						return
+					}
+
+					// King destroyed
+					if e.Players[opponentIndex].Towers[2].HP <= 0 {
+						e.KingOrTroopsDestroyed <- []*Player{e.Players[playerIndex], e.Players[opponentIndex]}
+						return
+					}
 				}
 			}
 		case msg := <-e.Players[1].User.Talk:
@@ -220,77 +240,241 @@ func handleCommand(e *Engine) {
 
 					network.SendMessage(p.User.Conn, network.Message{Type: config.MsgMatchUpdate, Data: matchData})
 					network.SendMessage(p.User.Conn, rs)
+
+					// All troops destroyed
+					troopCount := 0
+					for _, troop := range e.Players[playerIndex].Troops {
+						if troop.HP <= 0 {
+							troopCount++
+						}
+					}
+					if troopCount >= 3 {
+						e.KingOrTroopsDestroyed <- []*Player{e.Players[opponentIndex], e.Players[playerIndex]}
+						return
+					}
+
+					// King destroyed
+					if e.Players[opponentIndex].Towers[2].HP <= 0 {
+						e.KingOrTroopsDestroyed <- []*Player{e.Players[playerIndex], e.Players[opponentIndex]}
+						return
+					}
 				}
 			}
 		case <-e.Players[0].User.Interrupt:
 			fmt.Printf("Player %s disconnected\n", e.Players[0].User.Metadata.Username)
-			e.Interrupt <- true
-			if e.OnRequeue != nil {
-				e.OnRequeue(e.Players[1].User)
-			}
+
+			e.Interrupt <- e.Players[1].User
 			return
 		case <-e.Players[1].User.Interrupt:
 			fmt.Printf("Player %s disconnected\n", e.Players[1].User.Metadata.Username)
-			e.Interrupt <- true
-			if e.OnRequeue != nil {
-				e.OnRequeue(e.Players[0].User)
-			}
+
+			e.Interrupt <- e.Players[0].User
 			return
 		}
 	}
 }
 
 func handleGameEnd(e *Engine) {
-	if <-e.End {
-		player1 := e.Players[0]
-		player2 := e.Players[1]
+	select {
+	case user := <-e.Interrupt:
+		e.TimerEnd <- true
 
-		winner := whoWin(player1, player2)
+		for i := range 5 {
+			network.SendMessage(user.Conn, network.Message{Type: config.MsgError, Data: []string{
+				"The opponen disconnected!",
+				"You will be moved to the queue in",
+				fmt.Sprintf("%d seconds...", 5-i),
+			}})
+
+			time.Sleep(1 * time.Second)
+		}
+		if e.OnRequeue != nil {
+			e.OnRequeue(user)
+		}
+		network.SendMessage(user.Conn, network.Message{Type: config.MsgError, Data: []string{
+			"Waiting for other player...",
+		}})
+	case data := <-e.KingOrTroopsDestroyed:
+		fmt.Println(data)
+		e.TimerEnd <- true
+
+		winner := data[0]
+		loser := data[1]
 
 		if winner != nil {
 			winner.User.Metadata.EXP += 30.0
-
+			loser.User.Metadata.EXP += 10.0
 			doesUpgradeLevel(winner)
+			doesUpgradeLevel(loser)
 
-			for _, p := range e.Players {
-				network.SendMessage(p.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
-					"Game Over! (Next round in 5 seconds...)",
-					fmt.Sprintf("Winner: %s", winner.User.Metadata.Username),
-					fmt.Sprintf("+%d EXP => Level: %d", 30, int(winner.User.Metadata.Level)),
-				}})
-			}
+			winner.User.Metadata.SaveAll()
+			loser.User.Metadata.SaveAll()
+
+			go func() {
+				for i := range 5 {
+					network.SendMessage(winner.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
+						fmt.Sprintf("VICTORY! (Next round in %d seconds...)", 5-i),
+						fmt.Sprintf("Winner: %s", winner.User.Metadata.Username),
+						fmt.Sprintf("+%d EXP => Level: %d", 30, int(winner.User.Metadata.Level)),
+					}})
+					time.Sleep(1 * time.Second)
+				}
+				e.OnRequeue(winner.User)
+			}()
+
+			go func() {
+				for i := range 5 {
+					network.SendMessage(loser.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
+						fmt.Sprintf("DEFEAT! (Next round in %d seconds...)", 5-i),
+						fmt.Sprintf("Winner: %s", winner.User.Metadata.Username),
+						fmt.Sprintf("+%d EXP => Level: %d", 10, int(loser.User.Metadata.Level)),
+					}})
+					time.Sleep(1 * time.Second)
+				}
+				e.OnRequeue(loser.User)
+			}()
 		} else {
 			// Draw
+			player1 := e.Players[0]
+			player2 := e.Players[1]
 
-			player1.User.Metadata.EXP += 10.0
-			player2.User.Metadata.EXP += 10.0
+			player1.User.Metadata.EXP += 10
+			player2.User.Metadata.EXP += 10
 
 			doesUpgradeLevel(player1)
 			doesUpgradeLevel(player2)
 
-			for _, p := range e.Players {
-				network.SendMessage(p.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
-					"Daw!!! (Next round in 5 seconds...)",
-					fmt.Sprintf("Player: %s + %d EXP => Level: %d", player1.User.Metadata.Username, 10, int(player1.User.Metadata.Level)),
-					fmt.Sprintf("Player: %s + %d EXP => Level: %d", player2.User.Metadata.Username, 10, int(player2.User.Metadata.Level)),
-				}})
-			}
+			player1.User.Metadata.SaveAll()
+			player2.User.Metadata.SaveAll()
+
+			go func() {
+				for i := range 5 {
+					network.SendMessage(player1.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
+						fmt.Sprintf("DRAW! (Next round in %d seconds...)", 5-i),
+						fmt.Sprintf("+%d EXP => Level: %d", 10, int(player1.User.Metadata.Level)),
+					}})
+					time.Sleep(1 * time.Second)
+				}
+				e.OnRequeue(player1.User)
+			}()
+
+			time.Sleep(1 * time.Second)
+
+			go func() {
+				for i := range 5 {
+					network.SendMessage(player2.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
+						fmt.Sprintf("DRAW! (Next round in %d seconds...)", 5-i),
+						fmt.Sprintf("+%d EXP => Level: %d", 10, int(player2.User.Metadata.Level)),
+					}})
+					time.Sleep(1 * time.Second)
+				}
+				e.OnRequeue(player2.User)
+			}()
+		}
+	case <-e.TimerEnd:
+		winner, loser := whoWin(e.Players[0], e.Players[1])
+
+		if winner != nil {
+			winner.User.Metadata.EXP += 30.0
+			loser.User.Metadata.EXP += 10.0
+			doesUpgradeLevel(winner)
+			doesUpgradeLevel(loser)
+
+			winner.User.Metadata.SaveAll()
+			loser.User.Metadata.SaveAll()
+
+			go func() {
+				for i := range 5 {
+					network.SendMessage(winner.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
+						fmt.Sprintf("VICTORY! (Next round in %d seconds...)", 5-i),
+						fmt.Sprintf("Winner: %s", winner.User.Metadata.Username),
+						fmt.Sprintf("+%d EXP => Level: %d", 30, int(winner.User.Metadata.Level)),
+					}})
+					time.Sleep(1 * time.Second)
+				}
+				if e.OnRequeue != nil {
+					e.OnRequeue(winner.User)
+				}
+			}()
+
+			go func() {
+				for i := range 5 {
+					network.SendMessage(loser.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
+						fmt.Sprintf("DEFEAT! (Next round in %d seconds...)", 5-i),
+						fmt.Sprintf("Winner: %s", winner.User.Metadata.Username),
+						fmt.Sprintf("+%d EXP => Level: %d", 10, int(loser.User.Metadata.Level)),
+					}})
+					time.Sleep(1 * time.Second)
+				}
+				if e.OnRequeue != nil {
+					e.OnRequeue(loser.User)
+				}
+			}()
+		} else {
+			// Draw
+			player1 := e.Players[0]
+			player2 := e.Players[1]
+
+			player1.User.Metadata.EXP += 10
+			player2.User.Metadata.EXP += 10
+
+			doesUpgradeLevel(player1)
+			doesUpgradeLevel(player2)
+
+			player1.User.Metadata.SaveAll()
+			player2.User.Metadata.SaveAll()
+
+			go func() {
+				for i := range 5 {
+					network.SendMessage(player1.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
+						fmt.Sprintf("DRAW! (Next round in %d seconds...)", 5-i),
+						fmt.Sprintf("+%d EXP => Level: %d", 10, int(player1.User.Metadata.Level)),
+					}})
+					time.Sleep(1 * time.Second)
+				}
+				if e.OnRequeue != nil {
+					e.OnRequeue(player1.User)
+				}
+			}()
+
+			go func() {
+				for i := range 5 {
+					network.SendMessage(player2.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
+						fmt.Sprintf("DRAW! (Next round in %d seconds...)", 5-i),
+						fmt.Sprintf("+%d EXP => Level: %d", 10, int(player2.User.Metadata.Level)),
+					}})
+					time.Sleep(1 * time.Second)
+				}
+				if e.OnRequeue != nil {
+					e.OnRequeue(player2.User)
+				}
+			}()
 		}
 	}
 }
 
-func whoWin(p1, p2 *Player) *Player {
+func whoWin(p1, p2 *Player) (winner, loser *Player) {
+	towerDestroyed1 := 0
+	towerDestroyed2 := 0
+
 	for i := range 3 {
 		t1 := p1.Towers[i]
 		t2 := p2.Towers[i]
 
-		if t1.HP < t2.HP {
-			return p2
-		} else if t1.HP > t2.HP {
-			return p1
+		if t1.HP <= 0 {
+			towerDestroyed1++
+		}
+		if t2.HP <= 0 {
+			towerDestroyed2++
 		}
 	}
-	return nil
+	if towerDestroyed1 < towerDestroyed2 {
+		return p1, p2
+	} else if towerDestroyed1 > towerDestroyed2 {
+		return p2, p1
+	}
+
+	return nil, nil
 }
 
 func doesUpgradeLevel(p *Player) {
@@ -321,9 +505,6 @@ func doesUpgradeLevel(p *Player) {
 			tower.EXP *= 1.1
 			tower.HP *= 1.1
 			tower.Crit *= 1.1
-
 		}
-
-		p.User.Metadata.SaveAll()
 	}
 }

@@ -55,24 +55,23 @@ func (m *MatchMaker) HandleConnection(conn net.Conn) {
 
 	go user.ListenUser()
 
-	// Adding user to queue
-	m.mutext.Lock()
-	m.queue = append(m.queue, &user)
-	m.tryMatch()
-	m.mutext.Unlock()
+	tryMatch(&user, m)
 }
 
-func (m *MatchMaker) tryMatch() {
-	for len(m.queue) >= 2 {
+func tryMatch(u *game.User, m *MatchMaker) {
+	m.mutext.Lock()
+	m.queue = append(m.queue, u)
+	m.mutext.Unlock()
+
+	if len(m.queue) >= 2 {
+		m.mutext.Lock()
 		u1 := m.queue[0]
 		u2 := m.queue[1]
 		m.queue = m.queue[2:]
+		m.mutext.Unlock()
 
 		go game.NewEngine(u1, u2, func(u *game.User) {
-			m.mutext.Lock()
-			m.queue = append(m.queue, u)
-			m.tryMatch()
-			m.mutext.Unlock()
+			tryMatch(u, m)
 		}).Start()
 	}
 }
