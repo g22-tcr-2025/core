@@ -50,9 +50,11 @@ func NewEngine(u1, u2 *User, onRequeue func(u *User)) *Engine {
 }
 
 func randomTroop(troops []*Troop) []Troop {
-	tempTroops := make([]Troop, len(troops))
-	for i := range len(troops) {
-		tempTroops[i] = *troops[i]
+	tempTroops := []Troop{}
+	for _, t := range troops {
+		if t.Name != "Queen" {
+			tempTroops = append(tempTroops, *t)
+		}
 	}
 
 	rand.Shuffle(len(tempTroops), func(i, j int) {
@@ -156,7 +158,16 @@ func handleCommand(e *Engine) {
 			var command Command
 			json.Unmarshal(msg.Data.(json.RawMessage), &command)
 
-			rs, err := e.Players[0].Attack(e.Players[1], &command)
+			var rs network.Message
+			var err error
+			if command.TowerIndex == 5 && command.TroopIndex == 5 {
+				// Healing
+				rs, err = e.Players[0].Healing()
+			} else {
+				// Attack
+				rs, err = e.Players[0].Attack(e.Players[1], &command)
+			}
+
 			if err != nil {
 				network.SendMessage(e.Players[0].User.Conn, rs)
 			} else {
@@ -209,8 +220,17 @@ func handleCommand(e *Engine) {
 		case msg := <-e.Players[1].User.Talk:
 			var command Command
 			json.Unmarshal(msg.Data.(json.RawMessage), &command)
-			rs, err := e.Players[1].Attack(e.Players[0], &command)
 
+			var rs network.Message
+			var err error
+
+			if command.TowerIndex == 5 && command.TroopIndex == 5 {
+				// Healing
+				rs, err = e.Players[1].Healing()
+			} else {
+				// Attack
+				rs, err = e.Players[1].Attack(e.Players[0], &command)
+			}
 			if err != nil {
 				network.SendMessage(e.Players[1].User.Conn, rs)
 			} else {

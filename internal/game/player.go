@@ -94,3 +94,16 @@ func (p *Player) Attack(o *Player, command *Command) (network.Message, error) {
 		DefenseDamgeToTower:  defenseDmgToTower,
 	}}, nil
 }
+
+func (p *Player) Healing() (network.Message, error) {
+	lowest := &p.Towers[0]
+	for i := 1; i < len(p.Towers); i++ {
+		if p.Towers[i].HP < lowest.HP {
+			lowest = &p.Towers[i]
+		}
+	}
+
+	lowest.HP += 300
+
+	return network.Message{Type: config.MsgError, Data: []string{fmt.Sprintf("Healing %s's tower (%s): +%d 🩸", p.User.Metadata.Username, lowest.Type, 300)}}, nil
+}
