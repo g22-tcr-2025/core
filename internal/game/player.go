@@ -13,6 +13,7 @@ type Player struct {
 	Level  float64 `json:"level"`
 	Mana   float64 `json:"mana"`
 	EXP    float64 `json:"exp"`
+	Heal   bool    `json:"healing"`
 	Troops []Troop `json:"troops"`
 	Towers []Tower `json:"towers"`
 	Mutex  sync.Mutex
@@ -107,6 +108,11 @@ func (p *Player) Attack(o *Player, command *Command) (network.Message, error) {
 }
 
 func (p *Player) Healing() (network.Message, error) {
+	if p.Heal {
+		return network.Message{Type: config.MsgError, Data: []string{"You used Queen to heal yet."}}, nil
+	}
+	p.Heal = true
+
 	lowest := &p.Towers[0]
 	for i := 1; i < len(p.Towers); i++ {
 		if p.Towers[i].HP < lowest.HP {
