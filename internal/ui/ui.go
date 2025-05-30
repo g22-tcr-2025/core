@@ -183,7 +183,8 @@ func RenderTemplate(matchData game.MatchData) {
 	fmt.Println(borderBottom)
 
 	// Player
-	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", Color(matchData.PUsername).BrightGreen().Bold().String()), borderTop))
+	playerMetadata := fmt.Sprintf("%s - %d - %d", matchData.PUsername, int(matchData.PLevelMetadata), int(matchData.PEXPMetadata))
+	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", Color(playerMetadata).BrightGreen().Bold().String()), borderTop))
 	fmt.Println(centerContent(fmt.Sprintf("%s - %s", strconv.Itoa(int(math.Ceil(matchData.PLevel))), strconv.Itoa(int(math.Ceil(matchData.PEXP)))), borderTop))
 	fmt.Println(borderMiddle)
 	fmt.Println(centerContent(manaString(matchData.PMana), borderTop))
@@ -198,7 +199,8 @@ func RenderTemplate(matchData game.MatchData) {
 	fmt.Println(borderBottom)
 
 	// Opponent
-	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", Color(matchData.OUsername).BrightRed().Bold().String()), borderTop))
+	opponentMetadata := fmt.Sprintf("%s - %d - %d", matchData.OUsername, int(matchData.OLevelMetadata), int(matchData.OEXPMetadata))
+	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", Color(opponentMetadata).BrightRed().Bold().String()), borderTop))
 	fmt.Println(centerContent(fmt.Sprintf("%s - %s", strconv.Itoa(int(math.Ceil(matchData.OLevel))), strconv.Itoa(int(math.Ceil(matchData.OEXP)))), borderTop))
 	fmt.Println(borderMiddle)
 	fmt.Println(centerContent(manaString(matchData.OMana), borderTop))
