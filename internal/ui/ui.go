@@ -38,6 +38,7 @@ func ListenServer(conn net.Conn) {
 		case config.MsgMatchStart:
 			var template game.MatchData
 			json.Unmarshal(msg.Data.(json.RawMessage), &template)
+
 			RenderTemplate(template)
 		case config.MsgTick:
 			var current int
@@ -55,10 +56,12 @@ func ListenServer(conn net.Conn) {
 			var matchData game.MatchData
 			json.Unmarshal(msg.Data.(json.RawMessage), &matchData)
 
+			RenderCurrentPlayerLevelEXP(matchData.PLevel, matchData.PEXP)
 			RenderPlayerMana(matchData.PMana)
 			RenderPlayerTroops(matchData.PTroops)
 			RenderPlayerTowers(matchData.PTowers)
 
+			RenderCurrentOpponentLevelEXP(matchData.OLevel, matchData.OEXP)
 			RenderOpponentMana(matchData.OMana)
 			RenderOpponentTroops(matchData.OTroops)
 			RenderOpponentTowers(matchData.OTowers)
@@ -181,7 +184,7 @@ func RenderTemplate(matchData game.MatchData) {
 
 	// Player
 	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", Color(matchData.PUsername).BrightGreen().Bold().String()), borderTop))
-	fmt.Println(centerContent(fmt.Sprintf("%d", int(matchData.PLevel)), borderTop))
+	fmt.Println(centerContent(fmt.Sprintf("%s - %s", strconv.Itoa(int(math.Ceil(matchData.PLevel))), strconv.Itoa(int(math.Ceil(matchData.PEXP)))), borderTop))
 	fmt.Println(borderMiddle)
 	fmt.Println(centerContent(manaString(matchData.PMana), borderTop))
 	fmt.Println(borderMiddle)
@@ -196,7 +199,7 @@ func RenderTemplate(matchData game.MatchData) {
 
 	// Opponent
 	fmt.Println(centerTitle(fmt.Sprintf("🪪 %s 🪪", Color(matchData.OUsername).BrightRed().Bold().String()), borderTop))
-	fmt.Println(centerContent(fmt.Sprintf("%d", int(matchData.OLevel)), borderTop))
+	fmt.Println(centerContent(fmt.Sprintf("%s - %s", strconv.Itoa(int(math.Ceil(matchData.OLevel))), strconv.Itoa(int(math.Ceil(matchData.OEXP)))), borderTop))
 	fmt.Println(borderMiddle)
 	fmt.Println(centerContent(manaString(matchData.OMana), borderTop))
 	fmt.Println(borderMiddle)
@@ -347,6 +350,23 @@ func RenderDuration(current int) {
 	fmt.Print("\033[2;1H") // Move to line 2 col 1
 	fmt.Print("\033[K")    // Clear line
 	fmt.Printf("%s", centerContent(durationString(current), borderTop))
+	fmt.Print("\033[u") // Back to previous
+}
+
+func RenderCurrentPlayerLevelEXP(level, exp float64) {
+	fmt.Print("\033[s")    // Save pointer
+	fmt.Print("\033[5;1H") // Move to line 2 col 1
+	fmt.Print("\033[K")    // Clear line
+	fmt.Print(centerContent(fmt.Sprintf("%s - %s", strconv.Itoa(int(math.Ceil(level))), strconv.Itoa(int(math.Ceil(exp)))), borderTop))
+	fmt.Print("\033[u") // Back to previous
+}
+
+func RenderCurrentOpponentLevelEXP(level, exp float64) {
+	fmt.Print("\033[s")     // Save pointer
+	fmt.Print("\033[18;1H") // Move to line 2 col 1
+	fmt.Print("\033[K")     // Clear line
+	fmt.Print(centerContent(fmt.Sprintf("%s - %s", strconv.Itoa(int(math.Ceil(level))), strconv.Itoa(int(math.Ceil(exp)))), borderTop))
+
 	fmt.Print("\033[u") // Back to previous
 }
 

@@ -4,11 +4,13 @@ import (
 	"clash-royale/internal/config"
 	"clash-royale/internal/network"
 	"fmt"
+	"math"
 	"sync"
 )
 
 type Player struct {
 	User   *User   `json:"user"`
+	Level  float64 `json:"level"`
 	Mana   float64 `json:"mana"`
 	EXP    float64 `json:"exp"`
 	Troops []Troop `json:"troops"`
@@ -74,11 +76,20 @@ func (p *Player) Attack(o *Player, command *Command) (network.Message, error) {
 		defenseDmgToTroop = troop.DEF
 	}
 	troop.HP = max(troop.HP-dmgToTroop, 0.0)
+	if troop.HP <= 0 {
+		// This troop destroyed
+		o.EXP += troop.EXP
+		doesUpgradeLevelInGame(o)
+	}
 
 	dmgToTower := max(troop.ATK-tower.DEF, 0.0)
 	dmgToTowerOrigin := troop.ATK
 	defenseDmgToTower := tower.DEF
 	tower.HP = max(tower.HP-dmgToTower, 0.0)
+	if tower.HP <= 0 {
+		p.EXP += tower.EXP
+		doesUpgradeLevelInGame(p)
+	}
 
 	return network.Message{Type: config.MsgAttackResult, Data: CombatResult{
 		Attacker:             p.User.Metadata.Username,
@@ -106,4 +117,36 @@ func (p *Player) Healing() (network.Message, error) {
 	lowest.HP += 300
 
 	return network.Message{Type: config.MsgError, Data: []string{fmt.Sprintf("Healing %s's tower (%s): +%d 🩸", p.User.Metadata.Username, lowest.Type, 300)}}, nil
+}
+
+func doesUpgradeLevelInGame(p *Player) {
+	baseEXP := 100.0
+
+	currentLevel := p.Level
+	currentEXP := p.EXP
+
+	requiredEXP := baseEXP * math.Pow(1.1, currentLevel-1)
+	remainEXP := currentEXP - requiredEXP
+
+	if remainEXP >= 0 {
+		// Can upgrade
+		p.Level++
+		p.EXP = remainEXP
+
+		for _, troop := range p.Troops {
+			troop.ATK *= 1.1
+			troop.DEF *= 1.1
+			troop.EXP *= 1.1
+			troop.HP *= 1.1
+			troop.Mana *= 1.1
+		}
+
+		for _, tower := range p.Towers {
+			tower.ATK *= 1.1
+			tower.DEF *= 1.1
+			tower.EXP *= 1.1
+			tower.HP *= 1.1
+			tower.Crit *= 1.1
+		}
+	}
 }

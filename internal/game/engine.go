@@ -23,6 +23,7 @@ type Engine struct {
 func NewEngine(u1, u2 *User, onRequeue func(u *User)) *Engine {
 	p1 := Player{
 		User:   u1,
+		Level:  1.0,
 		Mana:   5.0,
 		EXP:    0.0,
 		Troops: randomTroop(u1.Metadata.Troops),
@@ -32,6 +33,7 @@ func NewEngine(u1, u2 *User, onRequeue func(u *User)) *Engine {
 
 	p2 := Player{
 		User:   u2,
+		Level:  1.0,
 		Mana:   5.0,
 		EXP:    0.0,
 		Troops: randomTroop(u2.Metadata.Troops),
@@ -79,24 +81,28 @@ func copyTowers(towers []*Tower) []Tower {
 func (e *Engine) Start() {
 	p1 := MatchData{
 		PUsername: e.Players[0].User.Metadata.Username,
-		PLevel:    e.Players[0].User.Metadata.Level,
+		PLevel:    e.Players[0].Level,
+		PEXP:      e.Players[0].EXP,
 		PMana:     e.Players[0].Mana,
 		PTroops:   e.Players[0].Troops,
 		PTowers:   e.Players[0].Towers,
 		OUsername: e.Players[1].User.Metadata.Username,
-		OLevel:    e.Players[1].User.Metadata.Level,
+		OLevel:    e.Players[1].Level,
+		OEXP:      e.Players[1].EXP,
 		OMana:     e.Players[1].Mana,
 		OTroops:   e.Players[1].Troops,
 		OTowers:   e.Players[1].Towers,
 	}
 	p2 := MatchData{
 		PUsername: e.Players[1].User.Metadata.Username,
-		PLevel:    e.Players[1].User.Metadata.Level,
+		PLevel:    e.Players[1].Level,
+		PEXP:      e.Players[1].EXP,
 		PMana:     e.Players[1].Mana,
 		PTroops:   e.Players[1].Troops,
 		PTowers:   e.Players[1].Towers,
 		OUsername: e.Players[0].User.Metadata.Username,
-		OLevel:    e.Players[0].User.Metadata.Level,
+		OLevel:    e.Players[0].Level,
+		OEXP:      e.Players[0].EXP,
 		OMana:     e.Players[0].Mana,
 		OTroops:   e.Players[0].Troops,
 		OTowers:   e.Players[0].Towers,
@@ -184,12 +190,14 @@ func handleCommand(e *Engine) {
 
 					matchData := MatchData{
 						PUsername: e.Players[playerIndex].User.Metadata.Username,
-						PLevel:    e.Players[playerIndex].User.Metadata.Level,
+						PLevel:    e.Players[playerIndex].Level,
+						PEXP:      e.Players[playerIndex].EXP,
 						PMana:     e.Players[playerIndex].Mana,
 						PTroops:   e.Players[playerIndex].Troops,
 						PTowers:   e.Players[playerIndex].Towers,
 						OUsername: e.Players[opponentIndex].User.Metadata.Username,
-						OLevel:    e.Players[opponentIndex].User.Metadata.Level,
+						OLevel:    e.Players[opponentIndex].Level,
+						OEXP:      e.Players[opponentIndex].EXP,
 						OMana:     e.Players[opponentIndex].Mana,
 						OTroops:   e.Players[opponentIndex].Troops,
 						OTowers:   e.Players[opponentIndex].Towers,
@@ -247,12 +255,14 @@ func handleCommand(e *Engine) {
 
 					matchData := MatchData{
 						PUsername: e.Players[playerIndex].User.Metadata.Username,
-						PLevel:    e.Players[playerIndex].User.Metadata.Level,
+						PLevel:    e.Players[playerIndex].Level,
+						PEXP:      e.Players[playerIndex].EXP,
 						PMana:     e.Players[playerIndex].Mana,
 						PTroops:   e.Players[playerIndex].Troops,
 						PTowers:   e.Players[playerIndex].Towers,
 						OUsername: e.Players[opponentIndex].User.Metadata.Username,
-						OLevel:    e.Players[opponentIndex].User.Metadata.Level,
+						OLevel:    e.Players[opponentIndex].Level,
+						OEXP:      e.Players[opponentIndex].EXP,
 						OMana:     e.Players[opponentIndex].Mana,
 						OTroops:   e.Players[opponentIndex].Troops,
 						OTowers:   e.Players[opponentIndex].Towers,
@@ -378,8 +388,6 @@ func handleGameEnd(e *Engine) {
 				e.OnRequeue(player1.User)
 			}()
 
-			time.Sleep(1 * time.Second)
-
 			go func() {
 				for i := range 5 {
 					network.SendMessage(player2.User.Conn, network.Message{Type: config.MsgMatchEnd, Data: []string{
@@ -503,7 +511,7 @@ func doesUpgradeLevel(p *Player) {
 	currentLevel := p.User.Metadata.Level
 	currentEXP := p.User.Metadata.EXP
 
-	requiredEXP := baseEXP * math.Pow(1.1, currentLevel)
+	requiredEXP := baseEXP * math.Pow(1.1, currentLevel-1)
 	remainEXP := currentEXP - requiredEXP
 
 	if remainEXP >= 0 {
