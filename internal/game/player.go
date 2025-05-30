@@ -139,7 +139,9 @@ func doesUpgradeLevelInGame(p *Player) {
 		p.Level++
 		p.EXP = remainEXP
 
-		for _, troop := range p.Troops {
+		for i := range p.Troops {
+			troop := &p.Troops[i]
+
 			troop.ATK *= 1.1
 			troop.DEF *= 1.1
 			troop.EXP *= 1.1
@@ -147,7 +149,9 @@ func doesUpgradeLevelInGame(p *Player) {
 			troop.Mana *= 1.1
 		}
 
-		for _, tower := range p.Towers {
+		for i := range p.Towers {
+			tower := &p.Towers[i]
+
 			tower.ATK *= 1.1
 			tower.DEF *= 1.1
 			tower.EXP *= 1.1
